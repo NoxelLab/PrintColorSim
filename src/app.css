@@ -30,7 +30,8 @@ a { color: inherit; }
 
 /* ツールの描画前から高さを確保し、下の説明が押し下げられないようにする */
 #app { min-height: 100vh; min-height: 100svh; }
-.app { max-width: 480px; height: 100vh; height: 100svh; margin: 0 auto; display: flex; flex-direction: column; background: var(--bg); overflow: hidden; }
+.app { max-width: 480px; margin: 0 auto; background: var(--bg); }
+.tool { height: 100vh; height: 100svh; display: flex; flex-direction: column; overflow: hidden; }
 
 header { flex: none; position: relative; display: flex; align-items: center; height: 44px; padding: 0 4px; border-bottom: 1px solid var(--edge); }
 header button { height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
@@ -80,8 +81,6 @@ header button { height: 40px; min-width: 40px; display: inline-flex; align-items
 .tablist button[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--fg); }
 .tablist button:focus-visible { outline-offset: -2px; }
 .profile { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font: 12px/1.4 var(--mono); color: var(--mute); }
-.approx { flex: none; display: inline-flex; align-items: center; gap: 3px; height: 22px; padding: 0 6px 0 4px; border: 1px solid #b88a00; border-radius: 3px; color: #f0c040; font-size: 11px; white-space: nowrap; }
-.approx .icon { width: 13px; height: 13px; stroke-width: 2.2; }
 
 /* 2つのタブを同じ場所に重ね、高いほうに合わせる */
 .panel { flex: none; display: grid; }
@@ -139,6 +138,15 @@ footer a { text-decoration: underline; text-decoration-color: rgba(255, 255, 255
 .gamut[aria-pressed="true"] { background: var(--warn); color: #000; }
 .monitor { flex: none; padding: 0 var(--gutter) 8px; background: var(--deep); font-size: 11px; color: #959595; }
 
+/* 標準データに基づかない表示の説明。スマホではツールの直下、広い画面では右の列の下端に置く */
+.note { padding: 4px var(--gutter) 16px; background: var(--deep); }
+.callout { border: 1px solid rgba(240, 192, 64, .3); border-radius: 8px; background: rgba(240, 192, 64, .05); }
+.callout p { display: flex; gap: 8px; padding: 12px; font-size: 12px; line-height: 1.7; color: var(--fg); }
+.callout p .icon { width: 16px; height: 16px; margin-top: 2px; color: #f0c040; stroke-width: 2; }
+.callout .row { min-height: 40px; padding: 0 12px; border-top: 1px solid rgba(255, 255, 255, .08); font-size: 12px; }
+.callout .row .icon { width: 16px; height: 16px; color: var(--mute); }
+@media (hover: hover) { .callout .row:hover { background: rgba(255, 255, 255, .04); } }
+
 dialog { width: 100%; max-width: 480px; max-height: 88dvh; margin: auto auto 0; padding: 0; border: 0; border-radius: 10px 10px 0 0; outline: 0; background: var(--bg); color: inherit; font-size: 14px; overflow: auto; }
 dialog::backdrop { background: rgba(0, 0, 0, .45); }
 dialog > div { padding: 8px 16px 16px; }
@@ -167,10 +175,12 @@ dialog p { padding: 12px 0; }
 }
 
 @media (min-width: 900px) {
-  .app { max-width: none; display: grid; grid-template: auto auto auto auto auto auto 1fr / minmax(0, 1fr) 380px; }
+  .app { max-width: none; height: 100vh; height: 100svh; display: grid; grid-template: auto auto auto auto auto auto 1fr / minmax(0, 1fr) 380px; overflow: hidden; }
+  .tool { display: contents; }
   header { grid-column: 1 / 3; }
   .stage { grid-row: 2 / 8; }
-  .info, .tabs, .panel, footer, .monitor { grid-column: 2; }
+  .info, .tabs, .panel, footer, .monitor, .note { grid-column: 2; }
+  .note { grid-row: 7; align-self: end; padding: 0 var(--gutter) var(--gutter); background: none; }
   .info { border-left: 1px solid var(--edge); }
   footer, .monitor { background: none; }
   dialog { margin: auto; border-radius: 10px; }

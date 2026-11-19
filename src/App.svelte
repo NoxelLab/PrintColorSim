@@ -34,7 +34,7 @@
   let long = $state(0);
   let dropping = $state(false);
   let saved = $state<{ url: string; name: string; file: File } | null>(null);
-  let saveDialog = $state<HTMLDialogElement>(), approxDialog = $state<HTMLDialogElement>();
+  let saveDialog = $state<HTMLDialogElement>();
   let fileInput = $state<HTMLInputElement>(), iccInput = $state<HTMLInputElement>();
 
   const embeddedPrint = $derived(file && file.info.space !== 'rgb' ? file.info.embedded : null);
@@ -183,102 +183,115 @@
 <svelte:window ondragover={e => { e.preventDefault(); dropping = true; }} ondragleave={() => { dropping = false; }} ondrop={drop} />
 
 <div class="app">
-  <header>
-    <button class="file" onclick={() => fileInput?.click()}><Icon name="open" /><span>{file?.name ?? t('open')}</span></button>
-    {#if file && file.info.pages > 1}
-      <div class="pager">
-        <button aria-label={t('prevPage')} onclick={() => { page = (page + file!.info.pages - 1) % file!.info.pages; }}><Icon name="prev" /></button>
-        <span>{page + 1} / {file.info.pages}</span>
-        <button aria-label={t('nextPage')} onclick={() => { page = (page + 1) % file!.info.pages; }}><Icon name="next" /></button>
+  <div class="tool">
+    <header>
+      <button class="file" onclick={() => fileInput?.click()}><Icon name="open" /><span>{file?.name ?? t('open')}</span></button>
+      {#if file && file.info.pages > 1}
+        <div class="pager">
+          <button aria-label={t('prevPage')} onclick={() => { page = (page + file!.info.pages - 1) % file!.info.pages; }}><Icon name="prev" /></button>
+          <span>{page + 1} / {file.info.pages}</span>
+          <button aria-label={t('nextPage')} onclick={() => { page = (page + 1) % file!.info.pages; }}><Icon name="next" /></button>
+        </div>
+      {/if}
+      <span class="gap"></span>
+      <button aria-label={t('save')} disabled={!view} onclick={() => { saved = null; saveDialog?.showModal(); }}><Icon name="save" /></button>
+      {#if busy}<div class="busy" role="progressbar"></div>{/if}
+    </header>
+
+    <Compare {view} warn={settings.warn} pin={picked} bind:long onpick={pick}>
+      {#if dropping}
+        <p class="drop">{t('drop')}</p>
+      {:else if !file && !busy}
+        <div class="empty">
+          <p class="lead">{t('lead')}</p>
+          <button class="primary" onclick={() => fileInput?.click()}><Icon name="open" />{t('open')}</button>
+          <p>{t('formats')}</p>
+          <button class="link" onclick={async () => openFile(await sample(), 'sample.png')}>{t('sample')}</button>
+          <p>{t('privacy')}</p>
+        </div>
+      {/if}
+      {#if error}<p class="error" role="alert">{t(error)}</p>{/if}
+    </Compare>
+
+    <div class="info" aria-label={t('values')}>
+      <div>{#each ['R', 'G', 'B'] as channel, i (channel)}<span><i>{channel}</i><b>{picked?.rgb?.[i] ?? '–'}</b></span>{/each}</div>
+      <div>{#each ['C', 'M', 'Y', 'K'] as channel, i (channel)}<span><i>{channel}</i><b>{picked?.cmyk[i] ?? '–'}</b></span>{/each}</div>
+    </div>
+
+    <div class="tabs">
+      <div class="tablist" role="tablist">
+        <button role="tab" id="tab-cond" aria-controls="pane-cond" aria-selected={tab === 'cond'} onclick={() => { tab = 'cond'; }}>{t('cond')}</button>
+        <button role="tab" id="tab-adv" aria-controls="pane-adv" aria-selected={tab === 'adv'} onclick={() => { tab = 'adv'; }}>{t('adv')}</button>
       </div>
-    {/if}
-    <span class="gap"></span>
-    <button aria-label={t('save')} disabled={!view} onclick={() => { saved = null; saveDialog?.showModal(); }}><Icon name="save" /></button>
-    {#if busy}<div class="busy" role="progressbar"></div>{/if}
-  </header>
+      <span class="profile">{profileName}</span>
+    </div>
 
-  <Compare {view} warn={settings.warn} pin={picked} bind:long onpick={pick}>
-    {#if dropping}
-      <p class="drop">{t('drop')}</p>
-    {:else if !file && !busy}
-      <div class="empty">
-        <p class="lead">{t('lead')}</p>
-        <button class="primary" onclick={() => fileInput?.click()}><Icon name="open" />{t('open')}</button>
-        <p>{t('formats')}</p>
-        <button class="link" onclick={async () => openFile(await sample(), 'sample.png')}>{t('sample')}</button>
-        <p>{t('privacy')}</p>
+    {#snippet customTintSegment()}
+      <label class:active={customTint}>
+        <i class="dot" class:any={!customTint} style:background={customTint ? settings.tint : null}></i>{t('customTint')}
+        <input type="color" aria-label={t('pickTint')} bind:value={settings.tint} />
+      </label>
+    {/snippet}
+
+    <!-- 2つのタブを重ねて置き、切り替えても画像の大きさが変わらないようにする -->
+    <div class="panel">
+      <div class="pane" role="tabpanel" id="pane-cond" aria-labelledby="tab-cond" class:off={tab !== 'cond'} inert={tab !== 'cond'}>
+        {#if profileOptions.length > 1}
+          <Choice label={t('profile')} hideLabel value={mode} options={profileOptions} onchange={chooseProfile} />
+        {/if}
+        {#if mode === 'preset'}
+          <Choice label={t('use')} bind:value={settings.use} options={options('use', USES)} onchange={use => Object.assign(settings, USE_DEFAULTS[use])} />
+          <Choice label={t('method')} bind:value={settings.method} options={options('method', METHODS)} />
+          <Choice label={t('paper')} bind:value={settings.paper} options={options('paper', PAPERS)} />
+          {#if settings.paper === 'special'}
+            <Choice label={t('tint')} bind:value={settings.tint} options={tintOptions} extra={customTintSegment} extraActive={customTint} />
+          {/if}
+        {/if}
+        <Choice label={t('pp')} bind:value={settings.pp} options={options('pp', PPS)} />
+        {#if mode === 'preset'}
+          <Choice label={t('region')} bind:value={settings.region} options={options('region', REGIONS)} />
+        {/if}
       </div>
-    {/if}
-    {#if error}<p class="error" role="alert">{t(error)}</p>{/if}
-  </Compare>
-
-  <div class="info" aria-label={t('values')}>
-    <div>{#each ['R', 'G', 'B'] as channel, i (channel)}<span><i>{channel}</i><b>{picked?.rgb?.[i] ?? '–'}</b></span>{/each}</div>
-    <div>{#each ['C', 'M', 'Y', 'K'] as channel, i (channel)}<span><i>{channel}</i><b>{picked?.cmyk[i] ?? '–'}</b></span>{/each}</div>
-  </div>
-
-  <div class="tabs">
-    <div class="tablist" role="tablist">
-      <button role="tab" id="tab-cond" aria-controls="pane-cond" aria-selected={tab === 'cond'} onclick={() => { tab = 'cond'; }}>{t('cond')}</button>
-      <button role="tab" id="tab-adv" aria-controls="pane-adv" aria-selected={tab === 'adv'} onclick={() => { tab = 'adv'; }}>{t('adv')}</button>
-    </div>
-    <span class="profile">{profileName}</span>
-    {#if resolved.approx}<button class="approx" onclick={() => approxDialog?.showModal()}><Icon name="alert" />{t('approx')}</button>{/if}
-  </div>
-
-  {#snippet customTintSegment()}
-    <label class:active={customTint}>
-      <i class="dot" class:any={!customTint} style:background={customTint ? settings.tint : null}></i>{t('customTint')}
-      <input type="color" aria-label={t('pickTint')} bind:value={settings.tint} />
-    </label>
-  {/snippet}
-
-  <!-- 2つのタブを重ねて置き、切り替えても画像の大きさが変わらないようにする -->
-  <div class="panel">
-    <div class="pane" role="tabpanel" id="pane-cond" aria-labelledby="tab-cond" class:off={tab !== 'cond'} inert={tab !== 'cond'}>
-      {#if profileOptions.length > 1}
-        <Choice label={t('profile')} hideLabel value={mode} options={profileOptions} onchange={chooseProfile} />
-      {/if}
-      {#if mode === 'preset'}
-        <Choice label={t('use')} bind:value={settings.use} options={options('use', USES)} onchange={use => Object.assign(settings, USE_DEFAULTS[use])} />
-        <Choice label={t('method')} bind:value={settings.method} options={options('method', METHODS)} />
-        <Choice label={t('paper')} bind:value={settings.paper} options={options('paper', PAPERS)} />
-        {#if settings.paper === 'special'}
-          <Choice label={t('tint')} bind:value={settings.tint} options={tintOptions} extra={customTintSegment} extraActive={customTint} />
+      <div class="pane" role="tabpanel" id="pane-adv" aria-labelledby="tab-adv" class:off={tab !== 'adv'} inert={tab !== 'adv'}>
+        {#if convertible}
+          <Choice label={t('intent')} bind:value={settings.intent} options={options('intent', INTENTS)} />
+          {#if !file?.info.embedded}
+            <Field label={t('input')} bind:value={settings.input} options={options('input', INPUTS)} />
+          {/if}
+          <label class="switch"><span>{t('bpc')}</span><input type="checkbox" role="switch" bind:checked={settings.bpc} /></label>
         {/if}
-      {/if}
-      <Choice label={t('pp')} bind:value={settings.pp} options={options('pp', PPS)} />
-      {#if mode === 'preset'}
-        <Choice label={t('region')} bind:value={settings.region} options={options('region', REGIONS)} />
-      {/if}
+        <label class="switch"><span>{t('paperWhite')}</span><input type="checkbox" role="switch" bind:checked={settings.paperWhite} /></label>
+        <button class="action" onclick={() => iccInput?.click()}>{t('loadIcc')}<Icon name="open" /></button>
+      </div>
     </div>
-    <div class="pane" role="tabpanel" id="pane-adv" aria-labelledby="tab-adv" class:off={tab !== 'adv'} inert={tab !== 'adv'}>
-      {#if convertible}
-        <Choice label={t('intent')} bind:value={settings.intent} options={options('intent', INTENTS)} />
-        {#if !file?.info.embedded}
-          <Field label={t('input')} bind:value={settings.input} options={options('input', INPUTS)} />
-        {/if}
-        <label class="switch"><span>{t('bpc')}</span><input type="checkbox" role="switch" bind:checked={settings.bpc} /></label>
+
+    <footer>
+      <button class="gamut" aria-label={t('showGamut')} aria-pressed={settings.warn} onclick={() => { settings.warn = !settings.warn; }}>
+        <Icon name="gamut" />{t('gamut')}<b>{view ? Math.round(view.percent) : '–'}%</b>
+      </button>
+      <span class="gap"></span>
+      <a href="https://x.com/intent/tweet?text={encodeURIComponent(t('shareText'))}&url={encodeURIComponent(SITE)}" target="_blank" rel="noopener">{t('share')}</a>
+      {#if settings.lang === 'ja'}
+        <a href={PAGES.en} hreflang="en" lang="en">English</a>
+      {:else}
+        <a href={PAGES.ja} hreflang="ja" lang="ja">日本語</a>
       {/if}
-      <label class="switch"><span>{t('paperWhite')}</span><input type="checkbox" role="switch" bind:checked={settings.paperWhite} /></label>
-      <button class="action" onclick={() => iccInput?.click()}>{t('loadIcc')}<Icon name="open" /></button>
-    </div>
+      <a href={SOURCE} target="_blank" rel="noopener">{t('sourceCode')}</a>
+    </footer>
+    <p class="monitor">{t('monitor')}</p>
   </div>
 
-  <footer>
-    <button class="gamut" aria-label={t('showGamut')} aria-pressed={settings.warn} onclick={() => { settings.warn = !settings.warn; }}>
-      <Icon name="gamut" />{t('gamut')}<b>{view ? Math.round(view.percent) : '–'}%</b>
-    </button>
-    <span class="gap"></span>
-    <a href="https://x.com/intent/tweet?text={encodeURIComponent(t('shareText'))}&url={encodeURIComponent(SITE)}" target="_blank" rel="noopener">{t('share')}</a>
-    {#if settings.lang === 'ja'}
-      <a href={PAGES.en} hreflang="en" lang="en">English</a>
-    {:else}
-      <a href={PAGES.ja} hreflang="ja" lang="ja">日本語</a>
-    {/if}
-    <a href={SOURCE} target="_blank" rel="noopener">{t('sourceCode')}</a>
-  </footer>
-  <p class="monitor">{t('monitor')}</p>
+  {#if resolved.approx}
+    <div class="note" role="note">
+      <div class="callout">
+        <p><Icon name="alert" />{t(resolved.substitute ? 'substituteText' : 'approxText')}</p>
+        {#if resolved.substitute}
+          <a class="row" href="https://japancolor.jp/icc.html" target="_blank" rel="noopener">{t('getJapanColor')}<Icon name="next" /></a>
+        {/if}
+        <button class="row" onclick={() => iccInput?.click()}>{t('loadIcc')}<Icon name="open" /></button>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <input type="file" hidden bind:this={fileInput} accept=".png,.jpg,.jpeg,.pdf,.psd,.tif,.tiff,image/png,image/jpeg,image/tiff,application/pdf" onchange={e => pickFile(e, f => openFile(f, f.name))} />
@@ -294,15 +307,5 @@
       <button class="row" onclick={() => save(false)}>{t('saveProof')}</button>
       <button class="row" onclick={() => save(true)}>{t('saveCompare')}</button>
     {/if}
-  </div>
-</dialog>
-
-<dialog bind:this={approxDialog} onclick={closeOnBackdrop}>
-  <div>
-    <p>{t(resolved.substitute ? 'substituteText' : 'approxText')}</p>
-    {#if resolved.substitute}
-      <a class="row" href="https://japancolor.jp/icc.html" target="_blank" rel="noopener">{t('getJapanColor')}<Icon name="next" /></a>
-    {/if}
-    <button class="row" onclick={() => { approxDialog?.close(); iccInput?.click(); }}>{t('loadIcc')}<Icon name="open" /></button>
   </div>
 </dialog>
