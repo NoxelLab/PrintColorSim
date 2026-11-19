@@ -8,10 +8,11 @@
 - [x] 書き出しと導線：保存2種、X で共有、ソースコード
 - [x] 資料：docs の更新、docs/ui の削除、README、LICENSE
 - [x] ルーターへの組み込み：sync-apps.mjs、_headers、_redirects
+- [x] 公開：GitHub の NoxelLab/PrintColorSim、noxelwork-router のデプロイ
+- [x] 検索と共有：言語別ページ、canonical と hreflang、JSON-LD、OG 画像、robots.txt とサイトマップ、IndexNow
 
-# 公開までに必要な作業
+# 残っている作業
 
-- [ ] Cloudflare Web Analytics のサイトトークンを取得し、ビーコンのスニペットを index.html に追加する
+- [ ] Cloudflare Web Analytics のサイトトークンを取得し、ビーコンのスニペットを index.html と en.html に追加する
+- [ ] Google Search Console に noxelwork.com を登録し、サイトマップを送信する（利用者の Google アカウントが必要）
 - [ ] スマホの実機（Safari、X のアプリ内ブラウザ）で読み込み・操作・保存を確認する
-- [x] 最初のコミットを作成し、GitHub に NoxelLab/PrintColorSim を公開する
-- [x] noxelwork-router をデプロイする
