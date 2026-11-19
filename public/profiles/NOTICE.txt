@@ -1,0 +1,27 @@
+The ICC profiles in this directory are separate works distributed unmodified
+alongside the application. They are not covered by the application's
+AGPL-3.0 license. Each profile remains under the terms of its own rights holder.
+
+ISOcoated_v2_bas.ICC
+PSO_Uncoated_ISO12647_bas.ICC
+  Copyright (c) 2007-2010, basICColor GmbH
+  zlib/libpng License. See LICENSE-basICColor.txt.
+  Source: https://sources.debian.org/src/icc-profiles-free/2.4/icc-profiles-basiccolor-printing2009/
+  Based on the Fogra characterisation data FOGRA39L and FOGRA47L.
+
+GRACoL2013_CRPC6.icc
+GRACoL2013UNC_CRPC3.icc
+  Copyright X-Rite, Inc. This profile is made available by IDEAlliance, with
+  permission of X-Rite, Inc., and may be used, embedded, exchanged, included
+  in commercial software and shared without restriction. It may not be altered
+  without written permission of IDEAlliance except for single site use.
+  Source: https://registry.color.org/profile-registry/
+
+AdobeCompat-v4.icc
+DisplayP3Compat-v4.icc
+Rec2020-v4.icc
+  Compact ICC Profiles, released to the public domain under CC0 1.0.
+  See LICENSE-CC0.txt.
+  Source: https://github.com/saucecontrol/Compact-ICC-Profiles
+  AdobeCompat-v4.icc is compatible with Adobe RGB (1998). It is not the profile
+  created by Adobe Systems Incorporated.
