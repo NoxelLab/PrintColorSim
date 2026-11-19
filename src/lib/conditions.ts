@@ -6,7 +6,8 @@ export const REGIONS = ['jp', 'eu', 'us'] as const;
 export const INTENTS = ['perc', 'rel', 'sat', 'abs'] as const;
 export const INPUTS = ['srgb', 'adobe', 'p3'] as const;
 export const LIGHTS = ['sun', 'overcast', 'neutral', 'warm'] as const;
-export const TINTS = { kraft: '#c8a67a', ecru: '#efe7d3' } as const;
+/** 特殊紙の紙色。白は内蔵の上質紙プロファイル（FOGRA47）の紙白 */
+export const TINTS = { white: '#eff1f4', ecru: '#efe7d3', kraft: '#c8a67a' } as const;
 
 export type Use = (typeof USES)[number];
 export type Method = (typeof METHODS)[number];

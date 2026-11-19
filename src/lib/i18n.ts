@@ -2,7 +2,7 @@ import { settings } from './settings.svelte';
 
 const ja = {
   lead: '印刷したときの色を入稿前に確認',
-  open: '入稿データを開く',
+  open: 'データを開く',
   formats: 'PNG・JPEG・PDF・PSD・TIFF',
   sample: 'サンプルで試す',
   privacy: '画像は端末内で処理され、送信されません',
@@ -88,8 +88,9 @@ const ja = {
   'input.srgb': 'sRGB',
   'input.adobe': 'Adobe RGB 互換',
   'input.p3': 'Display P3',
-  'tint.kraft': 'クラフト',
+  'tint.white': '白',
   'tint.ecru': '生成り',
+  'tint.kraft': 'クラフト',
 };
 
 export type Key = keyof typeof ja;
@@ -182,8 +183,9 @@ const en: Record<Key, string> = {
   'input.srgb': 'sRGB',
   'input.adobe': 'Adobe RGB compatible',
   'input.p3': 'Display P3',
-  'tint.kraft': 'Kraft',
+  'tint.white': 'White',
   'tint.ecru': 'Ecru',
+  'tint.kraft': 'Kraft',
 };
 
 const dictionaries = { ja, en };

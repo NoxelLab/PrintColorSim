@@ -19,7 +19,7 @@ const saved = load();
 /** 言語はページの URL で決まるため保存しない */
 const lang = document.documentElement.lang === 'en' ? 'en' : 'ja';
 const defaults: Settings = {
-  use: 'poster', method: 'offset', paper: 'coat', pp: 'none', region: lang === 'ja' ? 'jp' : 'eu', tint: TINTS.kraft,
+  use: 'poster', method: 'offset', paper: 'coat', pp: 'none', region: lang === 'ja' ? 'jp' : 'eu', tint: TINTS.white,
   intent: 'rel', bpc: true, input: 'srgb', paperWhite: true, warn: false, custom: false, light: 'neutral', lang,
 };
 
