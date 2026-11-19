@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import Choice from './components/Choice.svelte';
   import Compare from './components/Compare.svelte';
   import Field from './components/Field.svelte';
   import Icon from './components/Icon.svelte';
@@ -43,8 +44,8 @@
   );
   const profileOptions = $derived<{ value: ProfileMode; label: string }[]>([
     { value: 'preset', label: t('preset') },
-    ...(embeddedPrint ? [{ value: 'embedded' as const, label: `${t('fromFile')}: ${embeddedPrint}` }] : []),
-    ...(custom ? [{ value: 'custom' as const, label: `${t('loaded')}: ${custom.name}` }] : []),
+    ...(embeddedPrint ? [{ value: 'embedded' as const, label: t('fromFile') }] : []),
+    ...(custom ? [{ value: 'custom' as const, label: t('loaded') }] : []),
   ]);
   /** インテントと黒点補正は RGB 画像を印刷条件へ変換する場合にだけ効く */
   const convertible = $derived(!file || file.info.space === 'rgb');
@@ -218,30 +219,24 @@
     <button class:active={tab === 'cond'} onclick={() => { tab = 'cond'; }}>{t('cond')}</button>
     <button class:active={tab === 'adv'} onclick={() => { tab = 'adv'; }}>{t('adv')}</button>
     <span class="profile">{profileName}</span>
-    {#if resolved.approx}<button class="approx" onclick={() => approxDialog?.showModal()}>{t('approx')}</button>{/if}
+    {#if resolved.approx}<button class="approx" onclick={() => approxDialog?.showModal()}><Icon name="alert" />{t('approx')}</button>{/if}
   </div>
 
   {#if tab === 'cond'}
-    <div class="grid">
+    <div class="choices">
       {#if profileOptions.length > 1}
-        <Field wide label={t('profile')} value={mode} options={profileOptions} onchange={chooseProfile} />
+        <Choice label={t('profile')} value={mode} options={profileOptions} onchange={chooseProfile} />
       {/if}
-      <Field label={t('use')} bind:value={settings.use} options={options('use', USES)} disabled={mode !== 'preset'} onchange={use => Object.assign(settings, USE_DEFAULTS[use])} />
-      <Field label={t('method')} bind:value={settings.method} options={options('method', METHODS)} disabled={mode !== 'preset'} />
-      <Field label={t('paper')} bind:value={settings.paper} options={options('paper', PAPERS)} disabled={mode !== 'preset'} />
-      <Field label={t('pp')} bind:value={settings.pp} options={options('pp', PPS)} />
-      <Field label={t('region')} bind:value={settings.region} options={options('region', REGIONS)} disabled={mode !== 'preset'} />
+      <Choice label={t('use')} bind:value={settings.use} options={options('use', USES)} disabled={mode !== 'preset'} onchange={use => Object.assign(settings, USE_DEFAULTS[use])} />
+      <Choice label={t('method')} bind:value={settings.method} options={options('method', METHODS)} disabled={mode !== 'preset'} />
+      <Choice label={t('paper')} bind:value={settings.paper} options={options('paper', PAPERS)} disabled={mode !== 'preset'} />
       {#if resolved.tint}
-        <div class="field">
-          <span>{t('tint')}</span>
-          <div class="tint">
-            {#each Object.entries(TINTS) as [id, color] (id)}
-              <button class:active={settings.tint === color} onclick={() => { settings.tint = color; }}>{t(`tint.${id}` as Key)}</button>
-            {/each}
-            <input type="color" aria-label={t('pickTint')} bind:value={settings.tint} />
-          </div>
-        </div>
+        <Choice label={t('tint')} bind:value={settings.tint} options={Object.entries(TINTS).map(([id, color]) => ({ value: color, label: t(`tint.${id}` as Key) }))}>
+          <input type="color" aria-label={t('pickTint')} bind:value={settings.tint} />
+        </Choice>
       {/if}
+      <Choice label={t('pp')} bind:value={settings.pp} options={options('pp', PPS)} />
+      <Choice label={t('region')} bind:value={settings.region} options={options('region', REGIONS)} disabled={mode !== 'preset'} />
     </div>
   {:else}
     <div class="grid">

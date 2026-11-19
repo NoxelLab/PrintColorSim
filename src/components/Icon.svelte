@@ -6,6 +6,7 @@
     next: 'M9 5l7 7-7 7',
     down: 'M5 9l7 7 7-7',
     gamut: 'M4 4h16v16H4zM4 12l8-8M4 20L20 4M12 20l8-8',
+    alert: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 7.5v5.5M12 16.5v.01',
   };
   export type IconName = keyof typeof PATHS;
 </script>
