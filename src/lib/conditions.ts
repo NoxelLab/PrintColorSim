@@ -5,6 +5,7 @@ export const PPS = ['none', 'gloss', 'mattepp'] as const;
 export const REGIONS = ['jp', 'eu', 'us'] as const;
 export const INTENTS = ['perc', 'rel', 'sat', 'abs'] as const;
 export const INPUTS = ['srgb', 'adobe', 'p3'] as const;
+export const LIGHTS = ['sun', 'overcast', 'neutral', 'warm'] as const;
 export const TINTS = { kraft: '#c8a67a', ecru: '#efe7d3' } as const;
 
 export type Use = (typeof USES)[number];
@@ -14,6 +15,7 @@ export type Pp = (typeof PPS)[number];
 export type Region = (typeof REGIONS)[number];
 export type Intent = (typeof INTENTS)[number];
 export type Input = (typeof INPUTS)[number];
+export type Light = (typeof LIGHTS)[number];
 export type Lang = 'ja' | 'en';
 /** 印刷プロファイルの出どころ：内蔵プリセット、ファイルの指定、読み込んだ ICC */
 export type ProfileMode = 'preset' | 'embedded' | 'custom';
@@ -30,6 +32,8 @@ export interface Settings {
   input: Input;
   paperWhite: boolean;
   warn: boolean;
+  /** 立体表示の照明 */
+  light: Light;
   /** 読み込んだ ICC を印刷条件として使う */
   custom: boolean;
   lang: Lang;

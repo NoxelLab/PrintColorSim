@@ -58,6 +58,19 @@ header button { height: 40px; min-width: 40px; display: inline-flex; align-items
 }
 .handle:focus-visible i { box-shadow: 0 0 0 3px #4c9ffe; }
 
+/* 立体表示。ステージ全体に重ね、比較表示と同じ大きさを保つ */
+.scene { position: absolute; inset: 0; }
+.scene canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; outline: 0; }
+.scene canvas:active { cursor: grabbing; }
+.scene canvas:focus-visible { outline: 2px solid #4c9ffe; outline-offset: -2px; }
+.lights { position: absolute; left: 50%; bottom: 10px; width: min(calc(100% - 16px), 380px); transform: translateX(-50%); }
+.lights .choice, .view-switch .choice { display: block; }
+.lights .segments { background: rgba(22, 22, 22, .78); box-shadow: 0 1px 6px rgba(0, 0, 0, .45); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.view-switch { flex: none; width: 112px; margin-right: 2px; }
+:lang(en) .view-switch { width: 140px; }
+.view-switch .segments { height: 30px; }
+.view-switch .segments > * { height: auto; min-width: 0; }
+
 .empty { display: grid; justify-items: center; gap: 6px; padding: 16px; text-align: center; }
 .empty p { font-size: 12px; color: var(--mute); }
 .empty .lead { margin-bottom: 14px; font-size: 18px; font-weight: 600; line-height: 1.5; color: var(--fg); font-feature-settings: "palt"; }
@@ -143,6 +156,7 @@ footer a { text-decoration: underline; text-decoration-color: rgba(255, 255, 255
 .callout { border: 1px solid rgba(240, 192, 64, .3); border-radius: 8px; background: rgba(240, 192, 64, .05); }
 .callout p { display: flex; gap: 8px; padding: 12px; font-size: 12px; line-height: 1.7; color: var(--fg); }
 .callout p .icon { width: 16px; height: 16px; margin-top: 2px; color: #f0c040; stroke-width: 2; }
+.callout p + p { border-top: 1px solid rgba(255, 255, 255, .08); }
 .callout .row { min-height: 40px; padding: 0 12px; border-top: 1px solid rgba(255, 255, 255, .08); font-size: 12px; }
 .callout .row .icon { width: 16px; height: 16px; color: var(--mute); }
 @media (hover: hover) { .callout .row:hover { background: rgba(255, 255, 255, .04); } }

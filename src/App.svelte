@@ -4,6 +4,7 @@
   import Compare from './components/Compare.svelte';
   import Field from './components/Field.svelte';
   import Icon from './components/Icon.svelte';
+  import Scene from './components/Scene.svelte';
   import { INPUTS, INTENT_CODE, INTENTS, METHODS, PAPERS, PPS, PRESET_NAMES, type ProfileMode, REGIONS, resolve, THRESHOLD, TINTS, USE_DEFAULTS, USES } from './lib/conditions';
   import { displaySpace } from './lib/display';
   import { call, EngineError } from './lib/engine';
@@ -35,6 +36,9 @@
   let dropping = $state(false);
   let saved = $state<{ url: string; name: string; file: File } | null>(null);
   let saveDialog = $state<HTMLDialogElement>();
+  /** 立体表示 */
+  let solid = $state(false);
+  let scene = $state<ReturnType<typeof Scene>>();
   let fileInput = $state<HTMLInputElement>(), iccInput = $state<HTMLInputElement>();
 
   const embeddedPrint = $derived(file && file.info.space !== 'rgb' ? file.info.embedded : null);
@@ -140,20 +144,22 @@
     if (value !== 'embedded') settings.custom = value === 'custom';
   }
 
-  async function save(compare: boolean) {
+  /** スマホでは作成後に操作を挟まないと保存や共有を開始できないため、ダイアログ内のボタンから保存する */
+  function keep(blob: Blob, suffix: string) {
+    const name = `${file!.name.replace(/\.[^.]+$/, '')}-${suffix}.png`;
+    if (saved) URL.revokeObjectURL(saved.url);
+    saved = { url: URL.createObjectURL(blob), name, file: new File([blob], name, { type: 'image/png' }) };
+    if (!touch) {
+      download(saved.url, name);
+      saveDialog?.close();
+    }
+  }
+  async function save(kind: 'proof' | 'compare' | '3d') {
     if (!params || !file) return;
     busy++;
     try {
-      const result = await call('export', { params, compare });
-      const blob = await toPng(result, [t('original'), t('printed')]);
-      const name = `${file.name.replace(/\.[^.]+$/, '')}-${compare ? 'compare' : 'proof'}.png`;
-      if (saved) URL.revokeObjectURL(saved.url);
-      saved = { url: URL.createObjectURL(blob), name, file: new File([blob], name, { type: 'image/png' }) };
-      // スマホでは作成後に操作を挟まないと保存や共有を開始できないため、ダイアログ内のボタンから保存する
-      if (!touch) {
-        download(saved.url, name);
-        saveDialog?.close();
-      }
+      const blob = kind === '3d' ? await scene!.snapshot() : await toPng(await call('export', { params, compare: kind === 'compare' }), [t('original'), t('printed')]);
+      keep(blob, kind);
     } catch (e) {
       fail(e);
       saveDialog?.close();
@@ -194,11 +200,19 @@
         </div>
       {/if}
       <span class="gap"></span>
+      {#if view}
+        <div class="view-switch">
+          <Choice label={t('view')} hideLabel value={solid ? 'solid' : 'compare'} options={[{ value: 'compare', label: t('compare') }, { value: 'solid', label: t('solid') }]} onchange={v => { solid = v === 'solid'; }} />
+        </div>
+      {/if}
       <button aria-label={t('save')} disabled={!view} onclick={() => { saved = null; saveDialog?.showModal(); }}><Icon name="save" /></button>
       {#if busy}<div class="busy" role="progressbar"></div>{/if}
     </header>
 
-    <Compare {view} warn={settings.warn} pin={picked} bind:long onpick={pick}>
+    <Compare {view} active={!solid} warn={settings.warn} pin={picked} bind:long onpick={pick}>
+      {#if solid && view}
+        <Scene bind:this={scene} {view} onfail={() => { solid = false; error = 'webgl'; }} />
+      {/if}
       {#if dropping}
         <p class="drop">{t('drop')}</p>
       {:else if !file && !busy}
@@ -241,11 +255,14 @@
         {/if}
         {#if mode === 'preset'}
           <Choice label={t('use')} bind:value={settings.use} options={options('use', USES)} onchange={use => Object.assign(settings, USE_DEFAULTS[use])} />
+        {/if}
+        <!-- ファイルの指定や読み込んだ ICC を使う間も、立体表示ではつやを決めるために表示する -->
+        {#if mode === 'preset' || solid}
           <Choice label={t('method')} bind:value={settings.method} options={options('method', METHODS)} />
           <Choice label={t('paper')} bind:value={settings.paper} options={options('paper', PAPERS)} />
-          {#if settings.paper === 'special'}
-            <Choice label={t('tint')} bind:value={settings.tint} options={tintOptions} extra={customTintSegment} extraActive={customTint} />
-          {/if}
+        {/if}
+        {#if mode === 'preset' && settings.paper === 'special'}
+          <Choice label={t('tint')} bind:value={settings.tint} options={tintOptions} extra={customTintSegment} extraActive={customTint} />
         {/if}
         <Choice label={t('pp')} bind:value={settings.pp} options={options('pp', PPS)} />
         {#if mode === 'preset'}
@@ -281,14 +298,17 @@
     <p class="monitor">{t('monitor')}</p>
   </div>
 
-  {#if resolved.approx}
+  {#if resolved.approx || solid}
     <div class="note" role="note">
       <div class="callout">
-        <p><Icon name="alert" />{t(resolved.substitute ? 'substituteText' : 'approxText')}</p>
-        {#if resolved.substitute}
-          <a class="row" href="https://japancolor.jp/icc.html" target="_blank" rel="noopener">{t('getJapanColor')}<Icon name="next" /></a>
+        {#if solid}<p><Icon name="alert" />{t('solidText')}</p>{/if}
+        {#if resolved.approx}
+          <p><Icon name="alert" />{t(resolved.substitute ? 'substituteText' : 'approxText')}</p>
+          {#if resolved.substitute}
+            <a class="row" href="https://japancolor.jp/icc.html" target="_blank" rel="noopener">{t('getJapanColor')}<Icon name="next" /></a>
+          {/if}
+          <button class="row" onclick={() => iccInput?.click()}>{t('loadIcc')}<Icon name="open" /></button>
         {/if}
-        <button class="row" onclick={() => iccInput?.click()}>{t('loadIcc')}<Icon name="open" /></button>
       </div>
     </div>
   {/if}
@@ -304,8 +324,9 @@
     {:else if busy}
       <p class="row">{t('preparing')}</p>
     {:else}
-      <button class="row" onclick={() => save(false)}>{t('saveProof')}</button>
-      <button class="row" onclick={() => save(true)}>{t('saveCompare')}</button>
+      {#if solid}<button class="row" onclick={() => save('3d')}>{t('save3d')}</button>{/if}
+      <button class="row" onclick={() => save('proof')}>{t('saveProof')}</button>
+      <button class="row" onclick={() => save('compare')}>{t('saveCompare')}</button>
     {/if}
   </div>
 </dialog>

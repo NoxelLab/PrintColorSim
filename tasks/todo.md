@@ -11,8 +11,18 @@
 - [x] 公開：GitHub の NoxelLab/PrintColorSim、noxelwork-router のデプロイ
 - [x] 検索と共有：言語別ページ、canonical と hreflang、JSON-LD、OG 画像、robots.txt とサイトマップ、IndexNow
 
+# 立体表示
+
+- [x] three.js の導入と、純粋な関数（lighting、surface、rotation）とその単体テスト
+- [x] Worker の render にインキの面積率と紙の色を加える
+- [x] viewer.ts と Scene.svelte、比較との切り替え、照明の選択、保存
+- [x] 照明ごとの露出と白の色合いを撮影で合わせる
+- [x] 資料（core.txt、docs、README、説明文と JSON-LD）
+- [x] コミット、プッシュ、デプロイ、IndexNow
+
 # 残っている作業
 
 - [ ] Cloudflare Web Analytics のサイトトークンを取得し、ビーコンのスニペットを index.html と en.html に追加する
 - [ ] Google Search Console に noxelwork.com を登録し、サイトマップを送信する（利用者の Google アカウントが必要）
 - [ ] スマホの実機（Safari、X のアプリ内ブラウザ）で読み込み・操作・保存を確認する
+- [ ] スマホの実機で立体表示の描画・回転・拡大・保存と、P3 表示での色を確認する

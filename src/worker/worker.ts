@@ -3,6 +3,7 @@ import type { ErrorCode, ExportResult, FileInfo, PickResult, RenderParams, Rende
 import { Cms } from './cms';
 import { FileError, loadMupdf, MAX_WORK, open, type Source } from './document';
 import { iccSpace } from './icc-extract';
+import { coverage } from '../lib/surface';
 import { proof, type ProofCache, type ProofParams, type Raster } from './proof';
 
 const PROFILE_FILES: Record<string, string> = {
@@ -78,8 +79,14 @@ const handlers = {
     const { cms, proofParams, key, orig, sep } = await prepare(params);
     const r = proof(cms, `${revision}|${key}`, orig, sep, proofParams, cache);
     last = { orig, cmyk: r.cmyk };
-    const left = r.left.slice(), right = r.right.slice(), mask = r.mask.slice();
-    return [{ w: orig.w, h: orig.h, left, right, mask, percent: (r.flagged / (orig.w * orig.h)) * 100 }, [left.buffer, right.buffer, mask.buffer]];
+    const left = r.left.slice(), right = r.right.slice(), mask = r.mask.slice(), ink = coverage(r.cmyk);
+    // 紙の色は CMYK 0% の 1 画素を同じ条件で再現して求める
+    const blank = new Uint8Array(4);
+    const paper = proof(cms, '', { w: 1, h: 1, ch: 4, data: blank }, blank, { ...proofParams, source: params.print }).right;
+    return [
+      { w: orig.w, h: orig.h, left, right, mask, ink, paper: [paper[0], paper[1], paper[2]], percent: (r.flagged / (orig.w * orig.h)) * 100 },
+      [left.buffer, right.buffer, mask.buffer, ink.buffer],
+    ];
   },
 
   /** 作業用の解像度で帯ごとに処理し、メモリの使用量を抑える */

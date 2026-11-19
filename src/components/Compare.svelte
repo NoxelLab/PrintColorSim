@@ -6,6 +6,8 @@
 
   interface Props {
     view: RenderResult | null;
+    /** 立体表示の間は比較の画像を出さない。ステージと大きさの取得は残す */
+    active?: boolean;
     warn: boolean;
     pin: { u: number; v: number } | null;
     /** 表示領域の長辺（CSS ピクセル） */
@@ -13,7 +15,7 @@
     onpick: (u: number, v: number) => void;
     children?: Snippet;
   }
-  let { view, warn, pin, long = $bindable(), onpick, children }: Props = $props();
+  let { view, active = true, warn, pin, long = $bindable(), onpick, children }: Props = $props();
 
   const PADDING = 16;
   let boxWidth = $state(0), boxHeight = $state(0), split = $state(50);
@@ -58,7 +60,7 @@
 </script>
 
 <div class="stage" bind:clientWidth={boxWidth} bind:clientHeight={boxHeight}>
-  {#if view}
+  {#if view && active}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="compare" class:warn bind:this={root} style:width="{width}px" style:height="{(width * view.h) / view.w}px" style:--x="{split}%" onclick={pick}>
       <canvas bind:this={left}></canvas>

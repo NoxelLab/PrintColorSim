@@ -33,6 +33,10 @@ export interface RenderResult {
   left: Uint8ClampedArray<ArrayBuffer>;
   right: Uint8ClampedArray<ArrayBuffer>;
   mask: Uint8ClampedArray<ArrayBuffer>;
+  /** 画素ごとにインキに覆われた面積率（0〜255） */
+  ink: Uint8Array<ArrayBuffer>;
+  /** 紙の色（表示色空間の 0〜255） */
+  paper: [number, number, number];
   /** 色域外の画素の割合（%） */
   percent: number;
 }

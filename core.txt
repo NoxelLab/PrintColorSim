@@ -13,12 +13,13 @@ Print Color Simulator
 - 印刷条件の色域への色変換
 - 用紙の白さと紙色
 - PP 加工による色の変化
+- 日光・曇り空・昼白色・電球色の照明の下での見え方、つや、反射（立体表示）
 
 ## 対象外
 
 - 特色、箔押し、白インク
-- 実物の形状や照明を含むモックアップ
-- 観察照明の切り替え
+- 紙以外の物や置き場所の描画
+- 光源による分光的な色の変化（条件等色、蛍光増白剤の発光）
 - 入稿用 CMYK データの書き出し
 - 家庭用プリンター
 
@@ -32,5 +33,6 @@ Print Color Simulator
 
 - docs/print-conditions.md　印刷条件
 - docs/color-processing.md　色処理
+- docs/lighting.md　立体表示
 - docs/ui.md　画面
 - docs/architecture.md　技術構成と公開

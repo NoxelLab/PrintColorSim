@@ -15,6 +15,10 @@ function detect(): DisplaySpace {
 /** 画面が表示できる色空間。P3 に対応した画面と canvas がそろう場合だけ P3 を使う。 */
 export const displaySpace = detect();
 
+/** 立体表示の色空間。WebGL でも P3 を出せる場合だけ P3 を使う */
+export const sceneSpace: DisplaySpace =
+  displaySpace === 'p3' && typeof WebGL2RenderingContext !== 'undefined' && 'drawingBufferColorSpace' in WebGL2RenderingContext.prototype ? 'p3' : 'srgb';
+
 export function paint(canvas: HTMLCanvasElement, pixels: Uint8ClampedArray<ArrayBuffer>, w: number, h: number, space: DisplaySpace) {
   const colorSpace = canvasSpace(space);
   canvas.width = w;

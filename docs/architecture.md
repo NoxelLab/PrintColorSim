@@ -9,6 +9,7 @@
 | 画面 | Svelte、TypeScript、Vite |
 | 色変換 | Little CMS の WebAssembly 版（`lcms-wasm`） |
 | PDF と画像の読み込み | MuPDF の WebAssembly 版（`mupdf`） |
+| 立体表示 | three.js（WebGL）。立体に切り替えた時に別のファイルとして読み込む |
 
 サーバー側の処理は持たず、すべてブラウザ内で動作します。
 
@@ -17,7 +18,8 @@
 | 場所 | 内容 |
 | --- | --- |
 | `src/App.svelte`、`src/components` | 画面 |
-| `src/lib` | 印刷条件、設定の保存、文言、Worker とのやり取り、画面出力、保存 |
+| `src/lib` | 印刷条件、設定の保存、文言、Worker とのやり取り、画面出力、保存、照明と材質の計算 |
+| `src/three` | 立体表示の場面（紙、照明、映り込み、操作） |
 | `src/worker` | ファイルの読み込みと色処理。Web Worker として動作する |
 | `public/profiles` | 内蔵する ICC プロファイル |
 | `tests` | Worker 側の処理のテスト |
