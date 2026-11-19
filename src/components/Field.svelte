@@ -5,21 +5,22 @@
     label: string;
     value: T;
     options: { value: T; label: string }[];
-    disabled?: boolean;
-    wide?: boolean;
-    onchange?: (value: T) => void;
   }
-  let { label, value = $bindable(), options, disabled = false, wide = false, onchange }: Props = $props();
+  let { label, value = $bindable(), options }: Props = $props();
+
+  const id = $props.id();
   const current = $derived(options.find(o => o.value === value)?.label ?? '');
 </script>
 
-<label class="field select" class:disabled class:wide>
-  <span>{label}</span>
-  <b>{current}</b>
-  <Icon name="down" />
-  <select bind:value {disabled} onchange={() => onchange?.(value)}>
-    {#each options as option (option.value)}
-      <option value={option.value}>{option.label}</option>
-    {/each}
-  </select>
-</label>
+<div class="choice">
+  <span {id}>{label}</span>
+  <label class="dropdown">
+    <b>{current}</b>
+    <Icon name="down" />
+    <select bind:value aria-labelledby={id}>
+      {#each options as option (option.value)}
+        <option value={option.value}>{option.label}</option>
+      {/each}
+    </select>
+  </label>
+</div>

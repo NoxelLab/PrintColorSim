@@ -11,7 +11,8 @@ function load(): Partial<Settings> {
 }
 
 const saved = load();
-const lang = saved.lang ?? (navigator.language.startsWith('ja') ? 'ja' : 'en');
+/** 言語はページの URL で決まるため保存しない */
+const lang = document.documentElement.lang === 'en' ? 'en' : 'ja';
 const defaults: Settings = {
   use: 'poster', method: 'offset', paper: 'coat', pp: 'none', region: lang === 'ja' ? 'jp' : 'eu', tint: TINTS.kraft,
   intent: 'rel', bpc: true, input: 'srgb', paperWhite: true, warn: false, custom: false, lang,
@@ -19,7 +20,7 @@ const defaults: Settings = {
 
 export const settings = $state<Settings>({ ...defaults });
 for (const key of Object.keys(defaults) as (keyof Settings)[]) {
-  if (typeof saved[key] === typeof defaults[key]) (settings[key] as unknown) = saved[key];
+  if (key !== 'lang' && typeof saved[key] === typeof defaults[key]) (settings[key] as unknown) = saved[key];
 }
 
 $effect.root(() => {

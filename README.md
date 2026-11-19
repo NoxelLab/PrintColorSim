@@ -5,7 +5,7 @@
 印刷方式と用紙を選ぶと、ICC プロファイルで変換した印刷再現を元データと並べて表示します。\
 処理はすべてブラウザの中で行い、画像は外部へ送りません。
 
-公開先：<https://noxelwork.com/prtcorsim>
+公開先：<https://noxelwork.com/prtcorsim>（英語版：<https://noxelwork.com/prtcorsim/en>）
 
 ## できること
 

@@ -37,13 +37,27 @@ ICC プロファイルは AGPL の対象外とし、それぞれの権利者の�
 
 | 項目 | 内容 |
 | --- | --- |
-| 公開 URL | https://noxelwork.com/prtcorsim |
+| 公開 URL | https://noxelwork.com/prtcorsim（日本語）、https://noxelwork.com/prtcorsim/en（英語） |
 | 配信方式 | noxelwork-router の静的アセットに同梱 |
 
-ビルドは `base` を `/prtcorsim/` として行います。\
+ビルドは `base` を `/prtcorsim/` とし、`index.html`（日本語）と `en.html`（英語）の 2 ページを出力します。\
 noxelwork-router の `sync-apps.mjs` がビルドを実行し、成果物を `public/prtcorsim` に、`index.html` を `public/prtcorsim.html` に配置します。
 
 静的アセットはスクリプトを実行せずに配信されます。
+
+## 公開と検索
+
+ツールの画面は JavaScript で描画するため、検索と共有に必要な情報は各ページの HTML に直接書きます。
+
+| 要素 | 内容 |
+| --- | --- |
+| 言語 | 言語ごとに URL を分け、`canonical` と `hreflang`（`x-default` は英語）で対応を示す |
+| 説明 | ツールの下に使い方・対応条件・よくある質問を静的な HTML で置く。JavaScript を実行しないクローラーにも読める |
+| 構造化データ | `WebApplication` の JSON-LD。評価やレビューは実在しないため記載しない。画像は文字を重ねない `public/preview.jpg` |
+| 共有 | `og:*` と `twitter:card`（`summary_large_image`）。画像は `public/og.jpg` と `public/og-en.jpg`（1200×630） |
+| クロール | noxelwork-router の `public/robots.txt` と `public/sitemap.xml`（ドメイン直下）でサイトマップを知らせる。Bing などへは IndexNow で URL を通知する |
+
+OG 画像の印刷側には、アプリが書き出したサンプルの再現画像を使います。
 
 ## 外部との通信
 

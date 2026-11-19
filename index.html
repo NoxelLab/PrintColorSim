@@ -3,17 +3,102 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Print Color Simulator</title>
-<meta name="description" content="入稿データが印刷されたときの色味を入稿前に確認できるシミュレーター">
+<title>印刷の色味を入稿前に確認できる無料シミュレーター｜Print Color Simulator</title>
+<meta name="description" content="ポスターやチラシ、名刺、同人誌の入稿データが CMYK の印刷でどんな色になるかをブラウザで再現する無料ツールです。印刷方式・用紙・PP 加工を選んで元の色と見比べ、色が変わる範囲を確認できます。画像は送信しません。">
+<meta name="robots" content="max-image-preview:large">
 <meta name="theme-color" content="#323232">
-<meta property="og:title" content="Print Color Simulator">
-<meta property="og:description" content="入稿データが印刷されたときの色味を入稿前に確認できるシミュレーター">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://noxelwork.com/prtcorsim">
-<meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://noxelwork.com/prtcorsim">
+<link rel="alternate" hreflang="ja" href="https://noxelwork.com/prtcorsim">
+<link rel="alternate" hreflang="en" href="https://noxelwork.com/prtcorsim/en">
+<link rel="alternate" hreflang="x-default" href="https://noxelwork.com/prtcorsim/en">
 <link rel="icon" href="/prtcorsim/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/prtcorsim/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Print Color Simulator">
+<meta property="og:title" content="Print Color Simulator｜印刷の色味を入稿前に確認">
+<meta property="og:description" content="入稿データが印刷でどんな色になるかをブラウザで再現する無料ツール。印刷方式と用紙を選んで、色が変わる範囲を確認できます。">
+<meta property="og:url" content="https://noxelwork.com/prtcorsim">
+<meta property="og:image" content="https://noxelwork.com/prtcorsim/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="ポスターの元の色と印刷したときの色を左右で見比べる Print Color Simulator の画面">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Print Color Simulator",
+  "alternateName": "プリントカラーシミュレーター",
+  "url": "https://noxelwork.com/prtcorsim",
+  "description": "入稿データが CMYK の印刷でどんな色になるかをブラウザで再現し、元の色と見比べて色が変わる範囲を確認できる無料ツール。",
+  "inLanguage": "ja",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Web",
+  "browserRequirements": "Requires JavaScript and WebAssembly",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": 0, "priceCurrency": "JPY" },
+  "featureList": [
+    "オフセット印刷・オンデマンド印刷・大判インクジェットの色の再現",
+    "コート紙・マットコート紙・上質紙・特殊紙と PP 加工の選択",
+    "ICC プロファイルによる色変換と ICC プロファイルの読み込み",
+    "元の色と印刷の色の比較と色域外の表示",
+    "PNG・JPEG・TIFF・PSD・PDF の読み込み"
+  ],
+  "image": "https://noxelwork.com/prtcorsim/preview.jpg",
+  "screenshot": "https://noxelwork.com/prtcorsim/preview.jpg",
+  "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+  "sameAs": ["https://github.com/NoxelLab/PrintColorSim"],
+  "author": { "@type": "Organization", "name": "NoxelLab", "url": "https://github.com/NoxelLab" }
+}
+</script>
 </head>
 <body>
+<main>
+<noscript><p class="about">このツールを使うには JavaScript を有効にしてください。</p></noscript>
+<div id="app"></div>
+<article class="about" aria-labelledby="about-title">
+<h1 id="about-title">印刷の色味を入稿前に確認できるシミュレーター</h1>
+<p>Print Color Simulator は、ポスターやチラシ、名刺、同人誌などの入稿データが印刷されたときの色味をブラウザで再現する無料のツールです。</p>
+<p>画面の RGB と印刷の CMYK では表現できる色の範囲が異なり、鮮やかな青や緑、蛍光色に近い色は印刷するとくすみます。印刷方式と用紙を選ぶと、どこの色がどれだけ変わるかを入稿前に確かめることができます。</p>
+
+<h2>使い方</h2>
+<ol>
+<li>入稿データを開きます。</li>
+<li>用途、印刷方式、用紙、PP 加工、印刷基準を選びます。</li>
+<li>画像の上の境界線を動かして、元の色と印刷の色を見比べます。「色域外」を押すと、色が大きく変わる範囲が強調されます。</li>
+<li>画像を押すと、その点の色値が表示されます。</li>
+<li>再現した画像や比較画像を PNG で保存できます。</li>
+</ol>
+
+<h2>対応している印刷条件</h2>
+<dl>
+<dt>印刷方式</dt><dd>オフセット印刷、オンデマンド印刷、大判インクジェット</dd>
+<dt>用紙</dt><dd>コート紙、マットコート紙、上質紙、特殊紙（クラフト紙、生成り、任意の紙色）</dd>
+<dt>PP 加工</dt><dd>グロス PP、マット PP</dd>
+<dt>印刷基準</dt><dd>日本、欧州（FOGRA）、北米（GRACoL）</dd>
+</dl>
+<p>色の変換には ICC プロファイルを使います。印刷会社が配布している ICC プロファイルを読み込むと、その印刷所の条件で確認できます。標準データのない条件と日本の基準は、近い条件のプロファイルを基にした目安の表示です。</p>
+
+<h2>対応しているファイル</h2>
+<p>PNG、JPEG、TIFF、PSD、PDF を開くことができます。CMYK の画像と PDF は、データの CMYK 値を変えずに印刷の色を再現します。CMYK の画像に埋め込まれた ICC プロファイルや PDF の出力インテントがあれば、それを印刷条件として使います。</p>
+
+<h2>よくある質問</h2>
+<h3>RGB で作ったデータが印刷でくすむのはなぜですか</h3>
+<p>印刷のインキで表現できる色の範囲が、画面で表示できる範囲より狭いためです。範囲の外にある色は近い色に置き換わり、鮮やかさが落ちます。</p>
+<h3>画面で見た色は実際の印刷物と同じになりますか</h3>
+<p>モニターの種類や明るさによって見え方が変わるため、完全には一致しません。色が変わる傾向と範囲を入稿前に把握する目的でお使いください。</p>
+<h3>Japan Color で確認できますか</h3>
+<p>日本の基準は FOGRA で代用した目安の表示です。<a href="https://japancolor.jp/icc.html" target="_blank" rel="noopener">日本印刷産業機械工業会のサイト</a>から Japan Color の ICC プロファイルを入手し、「詳細」の「ICC プロファイルを読み込む」から読み込むと Japan Color で確認できます。</p>
+<h3>開いたデータはどこかに送られますか</h3>
+<p>送られません。ファイルの読み込みと色の変換はすべてブラウザの中で行います。</p>
+<h3>料金はかかりますか</h3>
+<p>無料で、登録も必要ありません。</p>
+
+<small>制作：NoxelLab　<a href="https://github.com/NoxelLab/PrintColorSim" target="_blank" rel="noopener">ソースコード（AGPL-3.0）</a></small>
+</article>
+</main>
 <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

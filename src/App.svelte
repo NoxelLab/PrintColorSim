@@ -16,6 +16,8 @@
 
   const SITE = 'https://noxelwork.com/prtcorsim';
   const SOURCE = 'https://github.com/NoxelLab/PrintColorSim';
+  /** 言語ごとのページ。言語は URL で決まる */
+  const PAGES = { ja: import.meta.env.BASE_URL.slice(0, -1), en: `${import.meta.env.BASE_URL}en` };
   const WARN: [number, number, number] = [0, 229, 255];
   const MAX_PREVIEW = 2048;
   const touch = matchMedia('(pointer: coarse)').matches;
@@ -47,6 +49,8 @@
     ...(embeddedPrint ? [{ value: 'embedded' as const, label: t('fromFile') }] : []),
     ...(custom ? [{ value: 'custom' as const, label: t('loaded') }] : []),
   ]);
+  const tintOptions = $derived(Object.entries(TINTS).map(([id, color]) => ({ value: color as string, label: t(`tint.${id}` as Key), swatch: color })));
+  const customTint = $derived(!(Object.values(TINTS) as string[]).includes(settings.tint));
   /** インテントと黒点補正は RGB 画像を印刷条件へ変換する場合にだけ効く */
   const convertible = $derived(!file || file.info.space === 'rgb');
   const maxLong = $derived(Math.min(MAX_PREVIEW, Math.ceil((long * devicePixelRatio) / 256) * 256));
@@ -89,9 +93,6 @@
   $effect(() => {
     const next = params;
     if (next) untrack(() => render(next));
-  });
-  $effect(() => {
-    document.documentElement.lang = settings.lang;
   });
 
   async function openFile(blob: Blob, name: string) {
@@ -201,6 +202,7 @@
       <p class="drop">{t('drop')}</p>
     {:else if !file && !busy}
       <div class="empty">
+        <p class="lead">{t('lead')}</p>
         <button class="primary" onclick={() => fileInput?.click()}><Icon name="open" />{t('open')}</button>
         <p>{t('formats')}</p>
         <button class="link" onclick={async () => openFile(await sample(), 'sample.png')}>{t('sample')}</button>
@@ -211,42 +213,57 @@
   </Compare>
 
   <div class="info" aria-label={t('values')}>
-    <div>{#each ['R', 'G', 'B'] as channel, i (channel)}<span>{channel}</span><b>{picked?.rgb?.[i] ?? '–'}</b>{/each}</div>
-    <div>{#each ['C', 'M', 'Y', 'K'] as channel, i (channel)}<span>{channel}</span><b>{picked?.cmyk[i] ?? '–'}</b>{/each}</div>
+    <div>{#each ['R', 'G', 'B'] as channel, i (channel)}<span><i>{channel}</i><b>{picked?.rgb?.[i] ?? '–'}</b></span>{/each}</div>
+    <div>{#each ['C', 'M', 'Y', 'K'] as channel, i (channel)}<span><i>{channel}</i><b>{picked?.cmyk[i] ?? '–'}</b></span>{/each}</div>
   </div>
 
   <div class="tabs">
-    <button class:active={tab === 'cond'} onclick={() => { tab = 'cond'; }}>{t('cond')}</button>
-    <button class:active={tab === 'adv'} onclick={() => { tab = 'adv'; }}>{t('adv')}</button>
+    <div class="tablist" role="tablist">
+      <button role="tab" id="tab-cond" aria-controls="pane-cond" aria-selected={tab === 'cond'} onclick={() => { tab = 'cond'; }}>{t('cond')}</button>
+      <button role="tab" id="tab-adv" aria-controls="pane-adv" aria-selected={tab === 'adv'} onclick={() => { tab = 'adv'; }}>{t('adv')}</button>
+    </div>
     <span class="profile">{profileName}</span>
     {#if resolved.approx}<button class="approx" onclick={() => approxDialog?.showModal()}><Icon name="alert" />{t('approx')}</button>{/if}
   </div>
 
-  {#if tab === 'cond'}
-    <div class="choices">
+  {#snippet customTintSegment()}
+    <label class:active={customTint}>
+      <i class="dot" class:any={!customTint} style:background={customTint ? settings.tint : null}></i>{t('customTint')}
+      <input type="color" aria-label={t('pickTint')} bind:value={settings.tint} />
+    </label>
+  {/snippet}
+
+  <!-- 2つのタブを重ねて置き、切り替えても画像の大きさが変わらないようにする -->
+  <div class="panel">
+    <div class="pane" role="tabpanel" id="pane-cond" aria-labelledby="tab-cond" class:off={tab !== 'cond'} inert={tab !== 'cond'}>
       {#if profileOptions.length > 1}
-        <Choice label={t('profile')} value={mode} options={profileOptions} onchange={chooseProfile} />
+        <Choice label={t('profile')} hideLabel value={mode} options={profileOptions} onchange={chooseProfile} />
       {/if}
-      <Choice label={t('use')} bind:value={settings.use} options={options('use', USES)} disabled={mode !== 'preset'} onchange={use => Object.assign(settings, USE_DEFAULTS[use])} />
-      <Choice label={t('method')} bind:value={settings.method} options={options('method', METHODS)} disabled={mode !== 'preset'} />
-      <Choice label={t('paper')} bind:value={settings.paper} options={options('paper', PAPERS)} disabled={mode !== 'preset'} />
-      {#if resolved.tint}
-        <Choice label={t('tint')} bind:value={settings.tint} options={Object.entries(TINTS).map(([id, color]) => ({ value: color, label: t(`tint.${id}` as Key) }))}>
-          <input type="color" aria-label={t('pickTint')} bind:value={settings.tint} />
-        </Choice>
+      {#if mode === 'preset'}
+        <Choice label={t('use')} bind:value={settings.use} options={options('use', USES)} onchange={use => Object.assign(settings, USE_DEFAULTS[use])} />
+        <Choice label={t('method')} bind:value={settings.method} options={options('method', METHODS)} />
+        <Choice label={t('paper')} bind:value={settings.paper} options={options('paper', PAPERS)} />
+        {#if settings.paper === 'special'}
+          <Choice label={t('tint')} bind:value={settings.tint} options={tintOptions} extra={customTintSegment} extraActive={customTint} />
+        {/if}
       {/if}
       <Choice label={t('pp')} bind:value={settings.pp} options={options('pp', PPS)} />
-      <Choice label={t('region')} bind:value={settings.region} options={options('region', REGIONS)} disabled={mode !== 'preset'} />
+      {#if mode === 'preset'}
+        <Choice label={t('region')} bind:value={settings.region} options={options('region', REGIONS)} />
+      {/if}
     </div>
-  {:else}
-    <div class="grid">
-      <Field label={t('intent')} bind:value={settings.intent} options={options('intent', INTENTS)} disabled={!convertible} />
-      <Field label={t('input')} bind:value={settings.input} options={options('input', INPUTS)} disabled={!convertible || !!file?.info.embedded} />
-      <label class="field check" class:disabled={!convertible}><span>{t('bpc')}</span><input type="checkbox" bind:checked={settings.bpc} disabled={!convertible} /></label>
-      <label class="field check"><span>{t('paperWhite')}</span><input type="checkbox" bind:checked={settings.paperWhite} /></label>
-      <button class="field wide action" onclick={() => iccInput?.click()}>{t('loadIcc')}<Icon name="open" /></button>
+    <div class="pane" role="tabpanel" id="pane-adv" aria-labelledby="tab-adv" class:off={tab !== 'adv'} inert={tab !== 'adv'}>
+      {#if convertible}
+        <Choice label={t('intent')} bind:value={settings.intent} options={options('intent', INTENTS)} />
+        {#if !file?.info.embedded}
+          <Field label={t('input')} bind:value={settings.input} options={options('input', INPUTS)} />
+        {/if}
+        <label class="switch"><span>{t('bpc')}</span><input type="checkbox" role="switch" bind:checked={settings.bpc} /></label>
+      {/if}
+      <label class="switch"><span>{t('paperWhite')}</span><input type="checkbox" role="switch" bind:checked={settings.paperWhite} /></label>
+      <button class="action" onclick={() => iccInput?.click()}>{t('loadIcc')}<Icon name="open" /></button>
     </div>
-  {/if}
+  </div>
 
   <footer>
     <button class="gamut" aria-label={t('showGamut')} aria-pressed={settings.warn} onclick={() => { settings.warn = !settings.warn; }}>
@@ -254,7 +271,11 @@
     </button>
     <span class="gap"></span>
     <a href="https://x.com/intent/tweet?text={encodeURIComponent(t('shareText'))}&url={encodeURIComponent(SITE)}" target="_blank" rel="noopener">{t('share')}</a>
-    <button onclick={() => { settings.lang = settings.lang === 'ja' ? 'en' : 'ja'; }}>{t('otherLang')}</button>
+    {#if settings.lang === 'ja'}
+      <a href={PAGES.en} hreflang="en" lang="en">English</a>
+    {:else}
+      <a href={PAGES.ja} hreflang="ja" lang="ja">日本語</a>
+    {/if}
     <a href={SOURCE} target="_blank" rel="noopener">{t('sourceCode')}</a>
   </footer>
   <p class="monitor">{t('monitor')}</p>

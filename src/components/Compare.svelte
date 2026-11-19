@@ -57,7 +57,7 @@
   }
 </script>
 
-<main bind:clientWidth={boxWidth} bind:clientHeight={boxHeight}>
+<div class="stage" bind:clientWidth={boxWidth} bind:clientHeight={boxHeight}>
   {#if view}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="compare" class:warn bind:this={root} style:width="{width}px" style:height="{(width * view.h) / view.w}px" style:--x="{split}%" onclick={pick}>
@@ -73,4 +73,4 @@
     </div>
   {/if}
   {@render children?.()}
-</main>
+</div>

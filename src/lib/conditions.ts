@@ -3,7 +3,7 @@ export const METHODS = ['offset', 'ondemand', 'inkjet'] as const;
 export const PAPERS = ['coat', 'matte', 'plain', 'special'] as const;
 export const PPS = ['none', 'gloss', 'mattepp'] as const;
 export const REGIONS = ['jp', 'eu', 'us'] as const;
-export const INTENTS = ['rel', 'perc', 'sat', 'abs'] as const;
+export const INTENTS = ['perc', 'rel', 'sat', 'abs'] as const;
 export const INPUTS = ['srgb', 'adobe', 'p3'] as const;
 export const TINTS = { kraft: '#c8a67a', ecru: '#efe7d3' } as const;
 

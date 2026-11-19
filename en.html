@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Print Color Simulator — Free Online CMYK Print Preview</title>
+<meta name="description" content="See how your artwork will look in CMYK print. Pick the process, paper and lamination, compare with the original and spot colors that shift. Free and private.">
+<meta name="robots" content="max-image-preview:large">
+<meta name="theme-color" content="#323232">
+<link rel="canonical" href="https://noxelwork.com/prtcorsim/en">
+<link rel="alternate" hreflang="ja" href="https://noxelwork.com/prtcorsim">
+<link rel="alternate" hreflang="en" href="https://noxelwork.com/prtcorsim/en">
+<link rel="alternate" hreflang="x-default" href="https://noxelwork.com/prtcorsim/en">
+<link rel="icon" href="/prtcorsim/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/prtcorsim/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Print Color Simulator">
+<meta property="og:title" content="Print Color Simulator — See how your artwork will look in print">
+<meta property="og:description" content="Free browser-based soft proofing. Pick the printing process and paper, and find areas that change color in print.">
+<meta property="og:url" content="https://noxelwork.com/prtcorsim/en">
+<meta property="og:image" content="https://noxelwork.com/prtcorsim/og-en.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Print Color Simulator comparing the original colors of a poster with how it will look in print">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Print Color Simulator",
+  "url": "https://noxelwork.com/prtcorsim/en",
+  "description": "Free browser-based soft proofing that shows how artwork will look when printed in CMYK and highlights areas that change color.",
+  "inLanguage": "en",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Web",
+  "browserRequirements": "Requires JavaScript and WebAssembly",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": 0, "priceCurrency": "USD" },
+  "featureList": [
+    "Color reproduction for offset, digital toner and large-format inkjet printing",
+    "Coated, matte coated, uncoated and specialty paper with gloss or matte lamination",
+    "ICC-based color conversion and loading custom ICC profiles",
+    "Side-by-side comparison with out-of-gamut highlighting",
+    "Opens PNG, JPEG, TIFF, PSD and PDF files"
+  ],
+  "image": "https://noxelwork.com/prtcorsim/preview.jpg",
+  "screenshot": "https://noxelwork.com/prtcorsim/preview.jpg",
+  "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+  "sameAs": ["https://github.com/NoxelLab/PrintColorSim"],
+  "author": { "@type": "Organization", "name": "NoxelLab", "url": "https://github.com/NoxelLab" }
+}
+</script>
+</head>
+<body>
+<main>
+<noscript><p class="about">Enable JavaScript to use this tool.</p></noscript>
+<div id="app"></div>
+<article class="about" aria-labelledby="about-title">
+<h1 id="about-title">See how your artwork will look in print</h1>
+<p>Print Color Simulator is a free browser tool that shows how posters, flyers, business cards and booklets will look once they are printed.</p>
+<p>Screens show colors in RGB, while printing presses use CMYK inks that cover a smaller range of colors. Vivid blues, greens and near-fluorescent colors come out duller on paper. Choose the printing process and paper to see which parts of your artwork will change, and by how much, before you send it to the printer.</p>
+
+<h2>How to use</h2>
+<ol>
+<li>Open your artwork.</li>
+<li>Choose the product, printing process, paper, lamination and printing standard.</li>
+<li>Drag the divider over the image to compare the original with the print. Turn on “Out of gamut” to highlight areas whose color changes noticeably.</li>
+<li>Tap the image to read the color values at that point.</li>
+<li>Save the proof or a side-by-side comparison as PNG.</li>
+</ol>
+
+<h2>Supported print conditions</h2>
+<dl>
+<dt>Process</dt><dd>Offset, digital toner, large-format inkjet</dd>
+<dt>Paper</dt><dd>Coated, matte coated, uncoated, specialty (kraft, ecru or any paper color)</dd>
+<dt>Lamination</dt><dd>Gloss, matte</dd>
+<dt>Standard</dt><dd>Japan, Europe (FOGRA), North America (GRACoL)</dd>
+</dl>
+<p>Colors are converted with ICC profiles. Load the ICC profile provided by your printer to check against its conditions. Conditions without standard data, and the Japanese standard, are approximations based on the closest profile.</p>
+
+<h2>Supported files</h2>
+<p>Open PNG, JPEG, TIFF, PSD and PDF files. CMYK images and PDFs keep their CMYK values, so the preview reflects the inks in your file. An ICC profile embedded in a CMYK image or a PDF output intent is used as the print condition when present.</p>
+
+<h2>FAQ</h2>
+<h3>Why do my RGB colors look dull in print?</h3>
+<p>Printing inks can reproduce a smaller range of colors than a screen can display. Colors outside that range are replaced with the closest printable color, which lowers their saturation.</p>
+<h3>Will the colors on screen match the printed result?</h3>
+<p>Not exactly. Monitors differ in color and brightness, so use the preview to understand which colors will shift and where.</p>
+<h3>Is my file uploaded?</h3>
+<p>No. Files are opened and converted entirely in your browser.</p>
+<h3>Is it free?</h3>
+<p>Yes, and no sign-up is required.</p>
+
+<small>Made by NoxelLab · <a href="https://github.com/NoxelLab/PrintColorSim" target="_blank" rel="noopener">Source code (AGPL-3.0)</a></small>
+</article>
+</main>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
