@@ -13,5 +13,5 @@
 
 - [ ] Cloudflare Web Analytics のサイトトークンを取得し、ビーコンのスニペットを index.html に追加する
 - [ ] スマホの実機（Safari、X のアプリ内ブラウザ）で読み込み・操作・保存を確認する
-- [ ] 最初のコミットを作成し、GitHub に NoxelLab/PrintColorSim を公開する
-- [ ] noxelwork-router をデプロイする
+- [x] 最初のコミットを作成し、GitHub に NoxelLab/PrintColorSim を公開する
+- [x] noxelwork-router をデプロイする
