@@ -28,6 +28,8 @@ a { color: inherit; }
 .icon { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .gap { flex: 1; }
 
+/* ツールの描画前から高さを確保し、下の説明が押し下げられないようにする */
+#app { min-height: 100vh; min-height: 100svh; }
 .app { max-width: 480px; height: 100vh; height: 100svh; margin: 0 auto; display: flex; flex-direction: column; background: var(--bg); overflow: hidden; }
 
 header { flex: none; position: relative; display: flex; align-items: center; height: 44px; padding: 0 4px; border-bottom: 1px solid var(--edge); }
