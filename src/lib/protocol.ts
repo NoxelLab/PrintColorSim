@@ -19,8 +19,8 @@ export interface RenderParams {
   input: string;
   intent: number;
   bpc: boolean;
-  chroma: number;
-  lift: number;
+  /** PP 加工。加工後の測色値を持つプロファイルと、その加工前の条件のプロファイルの ID */
+  film: { finished: string; base: string } | null;
   paperWhite: boolean;
   tint: [number, number, number] | null;
   threshold: number;

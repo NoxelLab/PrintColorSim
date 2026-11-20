@@ -1,24 +1,23 @@
 import {
   BackSide, BoxGeometry, Color, ColorManagement, DataTexture, DirectionalLight, LinearFilter, LinearMipmapLinearFilter,
-  LinearSRGBColorSpace, MathUtils, Matrix3, Mesh, MeshLambertMaterial, MeshPhysicalMaterial, type Object3D,
-  NeutralToneMapping, NoColorSpace, PerspectiveCamera, PMREMGenerator, PointLight, RectAreaLight, Scene, ShaderMaterial,
-  SphereGeometry, SpotLight, SRGBColorSpace, type WebGLRenderTarget, WebGLRenderer,
+  LinearSRGBColorSpace, MathUtils, Matrix3, Mesh, MeshPhysicalMaterial, NoColorSpace, type Object3D, OrthographicCamera,
+  PerspectiveCamera, PlaneGeometry, PMREMGenerator, RectAreaLight, Scene, ShaderMaterial, SphereGeometry, SRGBColorSpace,
+  Vector3, WebGLRenderTarget, WebGLRenderer,
 } from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import {
   DisplayP3ColorSpace, DisplayP3ColorSpaceImpl, LinearDisplayP3ColorSpace, LinearDisplayP3ColorSpaceImpl,
 } from 'three/addons/math/ColorSpaces.js';
 import type { Light } from '../lib/conditions';
-import { cast, type Space } from '../lib/lighting';
+import { cast, type Space, type Vec3 } from '../lib/lighting';
 import { blend, clamp, coast, ease, type Motion, moving, type Pose, REST } from '../lib/rotation';
-import type { Finish } from '../lib/surface';
+import { type Finish, included, INCLUDED_MAX } from '../lib/surface';
 
 export interface Look {
   light: Light;
   finish: Finish;
-  /** 長辺に対する紙の厚さ */
-  thickness: number;
+  /** 紙の長辺と厚さ（m） */
+  sheet: { long: number; thickness: number };
   warn: boolean;
 }
 
@@ -44,87 +43,103 @@ const OVERLAY = 56;
 const DRAG = 0.35;
 const ZOOM: [number, number] = [0.6, 3];
 
-type EnvKind = 'sky' | 'overcast' | 'room';
-
+/**
+ * 照明の配置。紙の中心を原点とし、手前を +z、上を +y とする。長さの単位は m。
+ * 光の強さは照明の中での比だけに意味があり、全体の明るさは最初の向きの拡散反射を測って合わせる。
+ * 光源は、最初の向きで映り込みが紙のすぐ外に来て、縁につやが見える方向に置く。
+ */
 interface Rig {
-  /** 照明を変えた時の露出。正面向きの紙の白が 2D の再現に近い明るさになるように合わせた値 */
-  exposure: number;
-  env: EnvKind;
-  envIntensity: number;
-  lights(color: Color): Object3D[];
+  /** distance は光源までの距離の倍率。大きな紙でも照明のむらが変わらないように遠ざけ、その分だけ明るくする */
+  lights(color: Color, distance: number): Object3D[];
+  /** 周囲からの光の放射輝度：天頂（天井）、低い空（壁の上部）、視線の高さの周囲、地面（床） */
+  around: { top: Vec3; horizon: Vec3; level: Vec3; ground: Vec3 };
 }
 
+/** 下を向いた天井の照明 */
+const panel = (color: Color, width: number, depth: number, position: Vec3, distance: number) => {
+  const light = new RectAreaLight(color, distance ** 2, width, depth);
+  light.position.set(...position).multiplyScalar(distance);
+  light.rotation.x = -Math.PI / 2;
+  return light;
+};
+
 const RIGS: Record<Light, Rig> = {
-  // 左上手前からの太陽と青空。太陽は空の青みと合わせて白が無彩色になる色にする
+  // 高度 56° で左後方からの太陽。直射が全体の約 8 割で、残りが青空と日の当たった周囲からの光
   sun: {
-    exposure: 0.72,
-    env: 'sky',
-    envIntensity: 0.55,
     lights: color => {
-      const sun = new DirectionalLight(color.clone().multiply(new Color(1, 0.97, 0.93)), 3.2);
-      sun.position.set(-0.7, 1.5, 1.2);
+      const sun = new DirectionalLight(color.clone().multiply(new Color(1, 0.93, 0.8)), 1);
+      sun.position.set(-0.236, 0.829, 0.507).multiplyScalar(10);
       return [sun];
     },
+    around: { top: [0.016, 0.028, 0.06], horizon: [0.06, 0.07, 0.085], level: [0.05, 0.048, 0.045], ground: [0.06, 0.056, 0.05] },
   },
-  // 空全体からの拡散光だけ
-  overcast: { exposure: 1.35, env: 'overcast', envIntensity: 1, lights: () => [] },
-  // 手前上方の天井に 2 枚の面光源
+  // CIE の標準曇天空。天頂が地平線の 3 倍明るい
+  overcast: {
+    lights: () => [],
+    around: { top: [1, 1, 1], horizon: [0.47, 0.47, 0.47], level: [0.1, 0.1, 0.1], ground: [0.15, 0.15, 0.15] },
+  },
+  // 1.2m 上、2m 手前の天井に 0.6×1.2m の照明が 2 枚。壁と天井からの間接光が全体の 3〜4 割
   neutral: {
-    exposure: 0.85,
-    env: 'room',
-    envIntensity: 0.45,
-    lights: color => [-0.45, 0.45].map(x => {
-      const panel = new RectAreaLight(color, 7, 0.5, 1.1);
-      panel.position.set(x, 1.15, 1.1);
-      panel.lookAt(x, -10, 1.1);
-      return panel;
-    }),
+    lights: (color, d) => [0.2, 1.3].map(x => panel(color, 0.6, 1.2, [x, 1.2, 2], d)),
+    around: { top: [0.02, 0.02, 0.02], horizon: [0.017, 0.017, 0.017], level: [0.017, 0.017, 0.017], ground: [0.01, 0.01, 0.01] },
   },
-  // 左上手前からのスポットと、暗い室内
+  // 1m 上、1.7m 手前の 0.4m 角の照明 1 灯と、暗い室内
   warm: {
-    exposure: 0.85,
-    env: 'room',
-    envIntensity: 0.12,
-    lights: color => {
-      const spot = new SpotLight(color, 9, 0, 0.55, 0.7, 2);
-      spot.position.set(-0.8, 1.3, 1.4);
-      spot.target.position.set(0, 0, 0);
-      return [spot, spot.target];
-    },
+    lights: (color, d) => [panel(color, 0.4, 0.4, [0.15, 1, 1.7], d)],
+    around: { top: [0.002, 0.002, 0.002], horizon: [0.0015, 0.0015, 0.0015], level: [0.0015, 0.0015, 0.0015], ground: [0.001, 0.001, 0.001] },
   },
 };
 
-let definedSpaces = false;
+/** この長さまでの紙は、照明を実際の距離に置く */
+const NEAR = 0.3;
 
-/** 空の色のグラデーションで映り込みの環境を作る */
-function gradientScene(top: Color, horizon: Color, ground: Color) {
+/**
+ * 紙の材質に加える処理。
+ * balance は最初の向きの拡散反射を 2D の再現に合わせる倍率。
+ * 明るさは拡散反射の白までを入力のまま出し、それより明るい照り返しだけを画面の白へ圧縮する。
+ */
+const HEADER = `
+uniform vec3 balance;
+vec3 sheetTone( vec3 color ) {
+  const float knee = 0.9;
+  float peak = max( color.r, max( color.g, color.b ) );
+  if ( peak <= knee ) return color;
+  float d = 1.0 - knee;
+  float mapped = 1.0 - d * d / ( peak + d - knee );
+  color *= mapped / peak;
+  return mix( color, vec3( mapped ), 1.0 - 1.0 / ( 0.15 * ( peak - mapped ) + 1.0 ) );
+}
+`;
+
+let prepared = false;
+
+/** 仰角で変わる放射輝度の球。映り込みと間接光の環境を作るために使う */
+function aroundScene({ top, horizon, level, ground }: Rig['around'], color: Color) {
+  const tinted = (v: Vec3) => new Color(...v).multiply(color);
   const scene = new Scene();
   const material = new ShaderMaterial({
     side: BackSide,
     depthWrite: false,
-    uniforms: { top: { value: top }, horizon: { value: horizon }, ground: { value: ground } },
-    vertexShader: 'varying vec3 vDir; void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: `uniform vec3 top; uniform vec3 horizon; uniform vec3 ground; varying vec3 vDir;
-      void main() { float y = normalize(vDir).y; vec3 c = y > 0.0 ? mix(horizon, top, pow(y, 0.6)) : mix(horizon, ground, pow(-y, 0.35)); gl_FragColor = vec4(c, 1.0); }`,
+    uniforms: { top: { value: tinted(top) }, horizon: { value: tinted(horizon) }, level: { value: tinted(level) }, ground: { value: tinted(ground) } },
+    vertexShader: 'varying vec3 vDir; void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }',
+    fragmentShader: `uniform vec3 top; uniform vec3 horizon; uniform vec3 level; uniform vec3 ground; varying vec3 vDir;
+      void main() {
+        float y = normalize( vDir ).y;
+        vec3 sky = mix( horizon, top, clamp( ( y - 0.2 ) / 0.8, 0.0, 1.0 ) );
+        // 高度 35〜50° より下は建物や壁
+        vec3 c = y < 0.0 ? mix( level, ground, smoothstep( 0.0, 0.6, - y ) ) : mix( level, sky, smoothstep( 0.57, 0.77, y ) );
+        gl_FragColor = vec4( c, 1.0 );
+      }`,
   });
   scene.add(new Mesh(new SphereGeometry(10, 48, 24), material));
   return scene;
 }
 
-function disposeScene(scene: Scene) {
-  scene.traverse(object => {
-    const mesh = object as Mesh;
-    if (!mesh.isMesh) return;
-    mesh.geometry.dispose();
-    (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).forEach(m => m.dispose());
-  });
-}
-
 export function createViewer(canvas: HTMLCanvasElement, space: Space, reducedMotion: boolean): Viewer {
-  if (!definedSpaces) {
+  if (!prepared) {
     ColorManagement.define({ [DisplayP3ColorSpace]: DisplayP3ColorSpaceImpl, [LinearDisplayP3ColorSpace]: LinearDisplayP3ColorSpaceImpl });
     RectAreaLightUniformsLib.init();
-    definedSpaces = true;
+    prepared = true;
   }
   const working = space === 'p3' ? LinearDisplayP3ColorSpace : LinearSRGBColorSpace;
   const texelSpace = space === 'p3' ? DisplayP3ColorSpace : SRGBColorSpace;
@@ -132,7 +147,6 @@ export function createViewer(canvas: HTMLCanvasElement, space: Space, reducedMot
 
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.outputColorSpace = texelSpace;
-  renderer.toneMapping = NeutralToneMapping;
   renderer.setClearColor(0x000000, 0);
   let pmrem = new PMREMGenerator(renderer);
 
@@ -142,32 +156,55 @@ export function createViewer(canvas: HTMLCanvasElement, space: Space, reducedMot
   const on = <K extends keyof HTMLElementEventMap>(type: K, fn: (e: HTMLElementEventMap[K]) => void, options: AddEventListenerOptions = {}) =>
     canvas.addEventListener(type, fn, { ...options, signal: controller.signal });
 
-  // 色かぶりの行列と色域外の表示は、材質を作り直さずに uniform だけで切り替える
+  // 色かぶりの行列、明るさの倍率、色域外の表示は、材質を作り直さずに uniform だけで切り替える
   const uniforms = {
+    balance: { value: new Vector3(1, 1, 1) },
     castMatrix: { value: new Matrix3() },
     warnColor: { value: new Color(WARN) },
     warnOn: { value: 0 },
   };
-  const front = new MeshPhysicalMaterial({ roughness: 1, metalness: 0, ior: 1.5 });
-  front.onBeforeCompile = shader => {
-    Object.assign(shader.uniforms, uniforms);
-    shader.fragmentShader = 'uniform mat3 castMatrix;\nuniform vec3 warnColor;\nuniform float warnOn;\n' + shader.fragmentShader.replace(
-      '#include <map_fragment>',
-      `#include <map_fragment>
-      diffuseColor.rgb = castMatrix * diffuseColor.rgb;
-      diffuseColor.rgb = mix( diffuseColor.rgb, warnColor, texture2D( roughnessMap, vRoughnessMapUv ).r * warnOn );`,
-    );
+  const material = (albedo: boolean) => {
+    const m = new MeshPhysicalMaterial({ roughness: 1, metalness: 0, ior: 1.5 });
+    m.onBeforeCompile = shader => {
+      Object.assign(shader.uniforms, uniforms);
+      let fragment = shader.fragmentShader
+        .replace('#include <opaque_fragment>', 'outgoingLight *= balance;\n#include <opaque_fragment>')
+        .replace('#include <tonemapping_fragment>', 'gl_FragColor.rgb = sheetTone( gl_FragColor.rgb );');
+      if (albedo) {
+        fragment = 'uniform mat3 castMatrix;\nuniform vec3 warnColor;\nuniform float warnOn;\n' + fragment.replace(
+          '#include <map_fragment>',
+          `#include <map_fragment>
+          vec4 surfaceTexel = texture2D( roughnessMap, vRoughnessMapUv );
+          diffuseColor.rgb = castMatrix * max( diffuseColor.rgb - surfaceTexel.b * ${INCLUDED_MAX}, 0.0 );
+          diffuseColor.rgb = mix( diffuseColor.rgb, warnColor, surfaceTexel.r * warnOn );`,
+        );
+      }
+      shader.fragmentShader = HEADER + fragment;
+    };
+    m.customProgramCacheKey = () => (albedo ? 'sheet-front' : 'sheet-plain');
+    return m;
   };
-  const back = new MeshPhysicalMaterial({ metalness: 0, ior: 1.5 });
-  const edge = new MeshPhysicalMaterial({ metalness: 0, ior: 1.5 });
+  const front = material(true), back = material(false), edge = material(false);
   // BoxGeometry の面の順は +x、−x、+y、−y、+z（表）、−z（裏）
   const sheet = new Mesh(new BoxGeometry(1, 1, 0.001), [edge, edge, edge, edge, front, back]);
   sheet.rotation.order = 'YXZ';
   scene.add(sheet);
 
+  // 最初の向きに置いた小さな面。照明ごとの明るさと色を測るために使う
+  const probeMaterial = new MeshPhysicalMaterial({ metalness: 0, ior: 1.5 });
+  const probe = new Mesh(new PlaneGeometry(0.01, 0.01), probeMaterial);
+  probe.rotation.order = 'YXZ';
+  probe.rotation.set(MathUtils.degToRad(REST.pitch), MathUtils.degToRad(REST.yaw), 0);
+  probe.visible = false;
+  scene.add(probe);
+  const probeCamera = new OrthographicCamera(-0.002, 0.002, 0.002, -0.002, 0.01, 1);
+  probeCamera.position.set(0, 0, 0.5);
+  const probeTarget = new WebGLRenderTarget(4, 4);
+  const probePixel = new Uint8Array(4);
+
   let albedo: DataTexture | null = null, surface: DataTexture | null = null;
-  let size = { w: 1, h: 1 }, thickness = 0.001, paperRgb: [number, number, number] = [255, 255, 255];
-  let look: Look | null = null, rigLights: Object3D[] = [];
+  let size = { w: 1, h: 1 }, paperRgb: [number, number, number] = [255, 255, 255];
+  let look: Look | null = null, rigLights: Object3D[] = [], rigKey = '', calibrationKey = '', geometryKey = '';
   const environments = new Map<string, WebGLRenderTarget>();
 
   let motion: Motion = { pose: { yaw: 0, pitch: 0 }, velocity: { yaw: 0, pitch: 0 } };
@@ -198,10 +235,18 @@ export function createViewer(canvas: HTMLCanvasElement, space: Space, reducedMot
     return texture(w, h, data, colorSpace);
   }
 
-  function rebuildGeometry() {
-    const aspect = size.w / size.h;
+  /** 紙の幅と高さ（m） */
+  function dimensions(): [number, number] {
+    const long = look?.sheet.long ?? 1, aspect = size.w / size.h;
+    return aspect >= 1 ? [long, long / aspect] : [long * aspect, long];
+  }
+
+  function updateGeometry() {
+    const [w, h] = dimensions(), key = `${w}|${h}|${look?.sheet.thickness}`;
+    if (key === geometryKey) return;
+    geometryKey = key;
     sheet.geometry.dispose();
-    sheet.geometry = new BoxGeometry(aspect >= 1 ? 1 : aspect, aspect >= 1 ? 1 / aspect : 1, thickness);
+    sheet.geometry = new BoxGeometry(w, h, look?.sheet.thickness ?? 0.001);
     frame();
   }
 
@@ -209,74 +254,97 @@ export function createViewer(canvas: HTMLCanvasElement, space: Space, reducedMot
   function frame() {
     const w = canvas.clientWidth || 1, h = canvas.clientHeight || 1;
     camera.aspect = w / h;
-    const aspect = size.w / size.h;
-    const sheetW = aspect >= 1 ? 1 : aspect, sheetH = aspect >= 1 ? 1 / aspect : 1;
+    const [sheetW, sheetH] = dimensions();
     const reserve = Math.min(0.3, OVERLAY / h);
     const tan = Math.tan(MathUtils.degToRad(camera.fov / 2));
     const fitH = (sheetH * 1.12) / (1 - reserve), fitW = sheetW * 1.12;
     const distance = Math.max(fitH / (2 * tan), fitW / (2 * tan * camera.aspect)) / zoom;
     const shift = reserve * distance * tan;
+    camera.near = distance / 20;
+    camera.far = distance * 20;
     camera.position.set(0, -shift, distance);
     camera.lookAt(0, -shift, 0);
     camera.updateProjectionMatrix();
   }
 
-  function environment(kind: EnvKind, color: Color) {
-    const key = `${kind}|${color.getHexString()}`;
+  function environment(light: Light, color: Color) {
+    const key = `${light}|${color.getHexString()}`;
     let target = environments.get(key);
     if (!target) {
-      let envScene: Scene;
-      if (kind === 'sky') envScene = gradientScene(new Color(0.42, 0.62, 1).multiply(color), new Color(0.95, 0.96, 0.98).multiply(color), new Color(0.3, 0.28, 0.26));
-      else if (kind === 'overcast') envScene = gradientScene(new Color(1, 1, 1).multiply(color), new Color(0.86, 0.86, 0.86).multiply(color), new Color(0.3, 0.3, 0.3));
-      else {
-        const room = new RoomEnvironment();
-        room.traverse(object => {
-          const light = object as PointLight;
-          if (light.isLight) light.color.multiply(color);
-          const material = (object as Mesh).material as MeshLambertMaterial | undefined;
-          if (material?.emissive) material.emissive.multiply(color);
-        });
-        envScene = room;
-      }
-      target = pmrem.fromScene(envScene, 0.04);
-      disposeScene(envScene);
+      const around = aroundScene(RIGS[light].around, color);
+      target = pmrem.fromScene(around, 0.02);
+      const sphere = around.children[0] as Mesh;
+      sphere.geometry.dispose();
+      (sphere.material as ShaderMaterial).dispose();
       environments.set(key, target);
     }
     return target.texture;
   }
 
+  /**
+   * 最初の向きの面の白と黒を描いて読み取り、その差（拡散反射）が target になる倍率を求める。
+   * 黒に残る分は表面の反射で、照明や周囲の映り込みとしてそのまま表示に加わる。
+   */
+  function calibrate(f: Finish, target: Vec3) {
+    Object.assign(probeMaterial, { roughness: f.paper, clearcoat: f.clearcoat, clearcoatRoughness: f.clearcoatRoughness, specularIntensity: f.specularIntensity });
+    const read = (reflectance: number): Vec3 => {
+      probeMaterial.color.setScalar(reflectance);
+      renderer.setRenderTarget(probeTarget);
+      renderer.clear();
+      renderer.render(scene, probeCamera);
+      renderer.readRenderTargetPixels(probeTarget, 2, 2, 1, 1, probePixel);
+      return [probePixel[0] / 255, probePixel[1] / 255, probePixel[2] / 255];
+    };
+    sheet.visible = false;
+    probe.visible = true;
+    // 8bit で読むため、読み取り値が 0.6〜0.94 に入るよう反射率を調整してから測る
+    let reflectance = 1, white = read(reflectance);
+    for (let i = 0; i < 4; i++) {
+      const peak = Math.max(...white);
+      if (peak > 0.94) reflectance /= 4;
+      else if (peak < 0.6) reflectance *= 0.8 / Math.max(peak, 0.01);
+      else break;
+      white = read(reflectance);
+    }
+    const black = read(0);
+    renderer.setRenderTarget(null);
+    probe.visible = false;
+    sheet.visible = true;
+    uniforms.balance.value.set(...(target.map((t, i) => (t * reflectance) / Math.max(white[i] - black[i], 1e-4)) as Vec3));
+  }
+
   function applyLook() {
     if (!look) return;
-    const rig = RIGS[look.light];
     const { matrix, color } = cast(look.light, space);
+    const lightColor = new Color().setRGB(color[0], color[1], color[2], working);
     uniforms.castMatrix.value.set(...matrix);
     uniforms.warnOn.value = look.warn ? 1 : 0;
-    const lightColor = new Color().setRGB(color[0], color[1], color[2], working);
 
-    rigLights.forEach(l => scene.remove(l));
-    rigLights = rig.lights(lightColor);
-    rigLights.forEach(l => scene.add(l));
-    scene.environment = environment(rig.env, lightColor);
-    scene.environmentIntensity = rig.envIntensity;
-    renderer.toneMappingExposure = rig.exposure;
+    const distance = Math.max(1, look.sheet.long / NEAR), key = `${look.light}|${distance}`;
+    if (rigKey !== key) {
+      rigKey = key;
+      rigLights.forEach(l => scene.remove(l));
+      rigLights = RIGS[look.light].lights(lightColor, distance);
+      rigLights.forEach(l => scene.add(l));
+      scene.environment = environment(look.light, lightColor);
+    }
 
     const f = look.finish;
     Object.assign(front, { clearcoat: f.clearcoat, clearcoatRoughness: f.clearcoatRoughness, specularIntensity: f.specularIntensity });
     Object.assign(back, { roughness: f.paper, clearcoat: f.clearcoat, clearcoatRoughness: f.clearcoatRoughness, specularIntensity: f.specularIntensity });
     Object.assign(edge, { roughness: f.paper, specularIntensity: f.specularIntensity });
+    if (`${key}|${JSON.stringify(f)}` !== calibrationKey) {
+      calibrationKey = `${key}|${JSON.stringify(f)}`;
+      calibrate(f, [lightColor.r, lightColor.g, lightColor.b]);
+    }
 
     // 裏と縁は紙の色に、表と同じ色かぶりを掛ける
     const paper = new Color().setRGB(paperRgb[0] / 255, paperRgb[1] / 255, paperRgb[2] / 255, texelSpace);
-    const [r, g, b] = [paper.r, paper.g, paper.b];
-    const m = matrix;
+    const [r, g, b] = paper.toArray().map(v => Math.max(0, v - included(f.clearcoat ? f.clearcoatRoughness : f.paper))), m = matrix;
     const tinted = new Color(m[0] * r + m[1] * g + m[2] * b, m[3] * r + m[4] * g + m[5] * b, m[6] * r + m[7] * g + m[8] * b);
     back.color.copy(tinted);
     edge.color.copy(tinted);
-
-    if (Math.abs(look.thickness - thickness) > 1e-9) {
-      thickness = look.thickness;
-      rebuildGeometry();
-    }
+    updateGeometry();
   }
 
   function startIntro() {
@@ -406,6 +474,7 @@ export function createViewer(canvas: HTMLCanvasElement, space: Space, reducedMot
     environments.clear();
     pmrem.dispose();
     pmrem = new PMREMGenerator(renderer);
+    rigKey = calibrationKey = '';
     applyLook();
     invalidate();
   }, { signal: controller.signal });
@@ -413,7 +482,6 @@ export function createViewer(canvas: HTMLCanvasElement, space: Space, reducedMot
   return {
     setImage(w, h, data, paper) {
       paperRgb = paper;
-      const resized = w !== size.w || h !== size.h;
       size = { w, h };
       const next = update(albedo, w, h, data, texelSpace);
       if (next !== albedo) {
@@ -421,7 +489,6 @@ export function createViewer(canvas: HTMLCanvasElement, space: Space, reducedMot
         front.needsUpdate = true;
       }
       albedo = next;
-      if (resized) rebuildGeometry();
       applyLook();
       startIntro();
       invalidate();
@@ -456,10 +523,12 @@ export function createViewer(canvas: HTMLCanvasElement, space: Space, reducedMot
       controller.abort();
       observer.disconnect();
       sheet.geometry.dispose();
-      [front, back, edge].forEach(m => m.dispose());
+      probe.geometry.dispose();
+      [front, back, edge, probeMaterial].forEach(m => m.dispose());
       albedo?.dispose();
       surface?.dispose();
       environments.forEach(t => t.dispose());
+      probeTarget.dispose();
       pmrem.dispose();
       renderer.dispose();
       renderer.forceContextLoss();

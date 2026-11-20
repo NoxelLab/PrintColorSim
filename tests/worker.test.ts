@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
+import * as L from 'lcms-wasm';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { Cms, RELATIVE } from '../src/worker/cms';
+import { ABSOLUTE, CMYK8, Cms, LABF, RELATIVE, RGB8 } from '../src/worker/cms';
 import { FileError, open as openSource } from '../src/worker/document';
 import { extract } from '../src/worker/icc-extract';
 import { deltaE2000 } from '../src/worker/lab';
@@ -97,7 +98,7 @@ describe('proof', () => {
   let cms: Cms;
   const params: ProofParams = {
     source: 'srgb', print: 'gracol', display: 'srgb', intent: RELATIVE, bpc: true,
-    chroma: 1, lift: 0, paperWhite: true, tint: null, threshold: 5, warn: [255, 0, 255],
+    film: null, paperWhite: true, tint: null, threshold: 5, warn: [255, 0, 255],
   };
   beforeAll(async () => {
     cms = await Cms.create();
@@ -145,9 +146,54 @@ describe('proof', () => {
     const orig = { w: 2, h: 1, ch: 3 as const, data: new Uint8Array([10, 200, 90, 250, 240, 30]) };
     const cache = {};
     const first = proof(cms, 'd', orig, null, params, cache);
-    const lifted = proof(cms, 'd', orig, null, { ...params, lift: 4 }, cache);
-    expect(lifted.left).toBe(first.left);
-    expect(lifted.right).not.toEqual(first.right);
+    const plain = proof(cms, 'd', orig, null, { ...params, paperWhite: false }, cache);
+    expect(plain.left).toBe(first.left);
+    expect(plain.right).not.toEqual(first.right);
     expect(proof(cms, 'd', orig, null, params, cache).right).toEqual(first.right);
+  });
+
+  it.each([[true, ABSOLUTE], [false, RELATIVE]])('Little CMS の校正用の変換と同じ色になる（紙白 %s）', async (paperWhite, proofIntent) => {
+    const grid: number[] = [];
+    for (let r = 0; r < 9; r++) for (let g = 0; g < 9; g++) for (let b = 0; b < 9; b++) grid.push(Math.min(255, r * 32 + 5), Math.min(255, g * 32 + 3), Math.min(255, b * 32 + 7));
+    const data = new Uint8Array(grid), n = data.length / 3;
+    const ours = proof(cms, 'e', { w: n, h: 1, ch: 3, data }, null, { ...params, print: 'fogra39', paperWhite }).right;
+
+    const lcms: any = await L.instantiate(), K: any = L, bytes = profile('ISOcoated_v2_bas.ICC');
+    const srgb = lcms.cmsCreate_sRGBProfile(), print = lcms.cmsOpenProfileFromMem(bytes, bytes.length);
+    const transform = lcms.cmsCreateProofingTransform(srgb, K.TYPE_RGB_8, srgb, K.TYPE_RGB_8, print, RELATIVE, proofIntent, K.cmsFLAGS_SOFTPROOFING | K.cmsFLAGS_BLACKPOINTCOMPENSATION);
+    const input = lcms._malloc(data.length), output = lcms._malloc(data.length);
+    lcms.HEAPU8.set(data, input);
+    lcms._cmsDoTransform(transform, input, output, n);
+    const reference: Uint8Array = lcms.HEAPU8.slice(output, output + data.length);
+
+    const rgb = new Uint8Array(n * 3);
+    for (let i = 0; i < n; i++) rgb.set(ours.subarray(i * 4, i * 4 + 3), i * 3);
+    const a = cms.run(rgb, 'srgb', RGB8, 'lab', LABF, RELATIVE), b = cms.run(reference, 'srgb', RGB8, 'lab', LABF, RELATIVE);
+    const de = Array.from({ length: n }, (_, i) => deltaE2000(a[i * 3], a[i * 3 + 1], a[i * 3 + 2], b[i * 3], b[i * 3 + 1], b[i * 3 + 2]));
+    expect(de.reduce((x, y) => x + y, 0) / n).toBeLessThan(0.3);
+    expect(Math.max(...de)).toBeLessThan(2.5);
+  });
+
+  it('PP 加工は加工後の実測値になる', () => {
+    cms.set('lamMatte', profile('PSO_Coated_v2_300_Matte_laminate_eci.icc'));
+    cms.set('lamGloss', profile('PSO_Coated_v2_300_Glossy_laminate_eci.icc'));
+    // 黒 100%、マゼンタ 40%、紙
+    const data = new Uint8Array([0, 0, 0, 255, 0, 102, 0, 0, 0, 0, 0, 0]);
+    const run = (film: ProofParams['film'], print = 'fogra39') =>
+      proof(cms, 'f', { w: 3, h: 1, ch: 4, data }, data, { ...params, source: print, print, film }).right;
+    const shown = (id: string) => cms.run(cms.run(data, id, CMYK8, 'lab', LABF, ABSOLUTE), 'lab', LABF, 'srgb', RGB8, RELATIVE);
+    for (const finished of ['lamMatte', 'lamGloss']) {
+      const right = run({ finished, base: 'fogra39' });
+      shown(finished).forEach((v, i) => expect(Math.abs(right[Math.floor(i / 3) * 4 + (i % 3)] - v)).toBeLessThanOrEqual(1));
+    }
+    // マットは黒が浅く、グロスは黒が深くなる。網点はどちらも濃くなる
+    const none = run(null), matte = run({ finished: 'lamMatte', base: 'fogra39' }), gloss = run({ finished: 'lamGloss', base: 'fogra39' });
+    expect(matte[1]).toBeGreaterThan(none[1] + 5);
+    expect(gloss[1]).toBeLessThan(none[1] - 3);
+    expect(matte[5]).toBeLessThan(none[5] - 5);
+    expect(gloss[5]).toBeLessThan(none[5] - 5);
+    // 加工前の条件が違う印刷条件には、加工の前後の差だけを加える
+    const other = run(null, 'gracol'), laminated = run({ finished: 'lamMatte', base: 'fogra39' }, 'gracol');
+    expect(Math.abs((laminated[1] - other[1]) - (matte[1] - none[1]))).toBeLessThanOrEqual(3);
   });
 });

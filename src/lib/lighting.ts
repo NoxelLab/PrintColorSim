@@ -86,7 +86,7 @@ const D65 = xyToXyz(0.3127, 0.329);
  * 目が慣れきれずに残る色かぶり。
  * 2D の再現は D50 の光に完全に慣れた見え方なので、錐体応答ごとに D + (1 − D) × 光源の白 ÷ 画面の白 を掛ける。
  * 照明は color の光で描き、基本色には matrix を掛ける。こうすると拡散反射は色かぶりを掛けた基本色、鏡面反射は color になる。
- * どちらも作業色空間の線形 RGB の値。
+ * どちらも作業色空間の線形 RGB の値で、color は画面に出せる範囲に収まるよう最大の成分を 1 にする。
  */
 export function cast(light: Light, space: Space) {
   const source = ILLUMINANTS[light];
@@ -96,8 +96,8 @@ export function cast(light: Light, space: Space) {
   const gain = from.map((v, i) => degree + ((1 - degree) * v) / to[i]) as Vec3;
   const toXyz = RGB_TO_XYZ[space];
   const a = product(inverse(toXyz), product(inverse(CAT16), product(diagonal(gain), product(CAT16, toXyz))));
-  const color = apply(a, [1, 1, 1]);
-  return { matrix: product(diagonal([1 / color[0], 1 / color[1], 1 / color[2]]), a), color, degree };
+  const white = apply(a, [1, 1, 1]), peak = Math.max(...white);
+  return { matrix: product(diagonal([1 / white[0], 1 / white[1], 1 / white[2]]), a), color: white.map(v => v / peak) as Vec3, degree };
 }
 
 const decode = (v: number) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);

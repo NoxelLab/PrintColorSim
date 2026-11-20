@@ -2,11 +2,14 @@ import * as L from 'lcms-wasm';
 
 export const RGB8 = L.TYPE_RGB_8;
 export const CMYK8 = L.TYPE_CMYK_8;
+export const CMYK16 = L.TYPE_CMYK_16;
 export const LABF = L.FLOAT_SH(1) | L.COLORSPACE_SH(L.PT_Lab) | L.CHANNELS_SH(3) | L.BYTES_SH(4);
 export const BPC = L.cmsFLAGS_BLACKPOINTCOMPENSATION;
+/** 変換を置き換える格子を細かくする。8bit 入力の変換の誤差が約半分になる */
+export const HIGHRES = L.cmsFLAGS_HIGHRESPRECALC;
 export const PERCEPTUAL = 0, RELATIVE = 1, SATURATION = 2, ABSOLUTE = 3;
 
-const BYTES: Record<number, number> = { [RGB8]: 3, [CMYK8]: 4, [LABF]: 12 };
+const BYTES: Record<number, number> = { [RGB8]: 3, [CMYK8]: 4, [CMYK16]: 8, [LABF]: 12 };
 const CHUNK = 1 << 16;
 
 export interface ProfileInfo { name: string; space: string }

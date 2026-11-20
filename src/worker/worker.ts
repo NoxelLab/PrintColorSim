@@ -11,6 +11,8 @@ const PROFILE_FILES: Record<string, string> = {
   fogra47: 'PSO_Uncoated_ISO12647_bas.ICC',
   gracol: 'GRACoL2013_CRPC6.icc',
   gracolUnc: 'GRACoL2013UNC_CRPC3.icc',
+  lamGloss: 'PSO_Coated_v2_300_Glossy_laminate_eci.icc',
+  lamMatte: 'PSO_Coated_v2_300_Matte_laminate_eci.icc',
   adobe: 'AdobeCompat-v4.icc',
   p3: 'DisplayP3Compat-v4.icc',
   rec2020: 'Rec2020-v4.icc',
@@ -45,7 +47,7 @@ async function prepare(p: RenderParams) {
     ...p,
     source: source.space === 'pdf' ? 'rec2020' : source.embedded ? 'embedded' : source.space === 'cmyk' ? p.print : p.input,
   };
-  for (const id of [p.print, p.display, proofParams.source]) await ensure(cms, id);
+  for (const id of [p.print, p.display, proofParams.source, ...(p.film ? [p.film.finished, p.film.base] : [])]) await ensure(cms, id);
   const rasters = source.rasters(p.page, p.maxLong, { key: `${p.print}#${revision}`, icc: icc.get(p.print)! });
   return { cms, proofParams, ...rasters };
 }

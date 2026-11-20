@@ -53,21 +53,14 @@ export const INTENT_CODE: Record<Intent, number> = { perc: 0, rel: 1, sat: 2, ab
 /** 色域外と判定する ΔE2000 の閾値 */
 export const THRESHOLD = 5;
 
-/** 標準プロファイルのない条件に加える近似補正。標準データに基づかない独自の設定値。 */
-const ADJUST: Record<string, { chroma: number; lift: number }> = {
-  matte: { chroma: 0.96, lift: 2 },
-  special: { chroma: 0.95, lift: 1 },
-  ondemand: { chroma: 0.97, lift: 1 },
-  inkjet: { chroma: 1.03, lift: -1 },
-  gloss: { chroma: 1.04, lift: -2 },
-  mattepp: { chroma: 0.94, lift: 3 },
-};
+/** PP 加工後の測色値を持つプロファイルと、その加工前の条件のプロファイル */
+const FILM: Record<Exclude<Pp, 'none'>, string> = { gloss: 'lamGloss', mattepp: 'lamMatte' };
+const FILM_BASE = 'fogra39';
 
 export interface Resolved {
   /** 印刷条件のプロファイル ID */
   print: string;
-  chroma: number;
-  lift: number;
+  film: { finished: string; base: string } | null;
   tint: [number, number, number] | null;
   /** 標準データに基づかない目安の表示 */
   approx: boolean;
@@ -79,20 +72,15 @@ export const hexToRgb = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i
 
 export function resolve(s: Settings, mode: ProfileMode): Resolved {
   const preset = mode === 'preset';
-  const factors = preset ? [s.method, s.paper, s.pp] : [s.pp];
-  let chroma = 1, lift = 0;
-  for (const f of factors) {
-    chroma *= ADJUST[f]?.chroma ?? 1;
-    lift += ADJUST[f]?.lift ?? 0;
-  }
   const coated = s.paper === 'coat' || s.paper === 'matte';
   const substitute = preset && s.region === 'jp';
+  const print = !preset ? mode : s.region === 'us' ? (coated ? 'gracol' : 'gracolUnc') : coated ? 'fogra39' : 'fogra47';
   return {
-    print: !preset ? mode : s.region === 'us' ? (coated ? 'gracol' : 'gracolUnc') : coated ? 'fogra39' : 'fogra47',
-    chroma,
-    lift,
+    print,
+    film: s.pp === 'none' ? null : { finished: FILM[s.pp], base: FILM_BASE },
     tint: preset && s.paper === 'special' ? hexToRgb(s.tint) : null,
-    approx: substitute || factors.some(f => f in ADJUST),
+    // オフセット以外の方式と特殊紙には標準の測色データがない。PP 加工のデータは加工前の条件が同じ時だけそのまま当てはまる
+    approx: substitute || (preset && (s.method !== 'offset' || s.paper === 'special')) || (s.pp !== 'none' && print !== FILM_BASE),
     substitute,
   };
 }

@@ -17,6 +17,15 @@ GRACoL2013UNC_CRPC3.icc
   without written permission of IDEAlliance except for single site use.
   Source: https://registry.color.org/profile-registry/
 
+PSO_Coated_v2_300_Glossy_laminate_eci.icc
+PSO_Coated_v2_300_Matte_laminate_eci.icc
+  This profile is made available by ECI European Color Initiative, with
+  permission of Heidelberger Druckmaschinen AG, and may be used, embedded,
+  exchanged, and shared without restriction. It may not be altered or sold
+  without written permission of ECI European Color Initiative.
+  Source: https://eci.org/lib/exe/eci_offset_profiles_surface_finished.zip
+  Based on the Fogra characterisation data FOGRA50L and FOGRA49L.
+
 AdobeCompat-v4.icc
 DisplayP3Compat-v4.icc
 Rec2020-v4.icc

@@ -64,7 +64,7 @@
     void custom?.revision;
     return {
       page, maxLong, display: displaySpace, print: resolved.print, input: settings.input,
-      intent: INTENT_CODE[settings.intent], bpc: settings.bpc, chroma: resolved.chroma, lift: resolved.lift,
+      intent: INTENT_CODE[settings.intent], bpc: settings.bpc, film: resolved.film,
       paperWhite: settings.paperWhite, tint: resolved.tint, threshold: THRESHOLD, warn: WARN,
     };
   });

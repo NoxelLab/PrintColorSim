@@ -3,8 +3,8 @@ export interface Pose { yaw: number; pitch: number }
 export interface Motion { pose: Pose; velocity: Pose }
 
 export const LIMIT: Pose = { yaw: 70, pitch: 60 };
-/** 立体に切り替えた時の向き。左上手前の光源の映り込みが紙の上端に来て、つやの違いが見える角度 */
-export const REST: Pose = { yaw: -12, pitch: -18 };
+/** 立体に切り替えた時の向き。照明はこの向きを基準に、映り込みが紙のすぐ外に来る位置に置く */
+export const REST: Pose = { yaw: -12, pitch: -12 };
 
 /** 慣性の減り方（1/秒）と、止まったとみなす速さ（度/秒） */
 const FRICTION = 6;

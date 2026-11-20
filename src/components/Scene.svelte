@@ -5,7 +5,7 @@
   import { p3ToSrgb } from '../lib/lighting';
   import type { RenderResult } from '../lib/protocol';
   import { settings } from '../lib/settings.svelte';
-  import { finish, surfaceMap, THICKNESS } from '../lib/surface';
+  import { finish, SHEET, surfaceMap } from '../lib/surface';
   import type { Viewer } from '../three/viewer';
   import Choice from './Choice.svelte';
 
@@ -39,7 +39,7 @@
   });
 
   $effect(() => {
-    viewer?.setLook({ light: settings.light, finish: surfaceFinish, thickness: THICKNESS[settings.use], warn: settings.warn });
+    viewer?.setLook({ light: settings.light, finish: surfaceFinish, sheet: SHEET[settings.use], warn: settings.warn });
   });
   $effect(() => {
     viewer?.setImage(view.w, view.h, displaySpace === sceneSpace ? view.right : p3ToSrgb(view.right), view.paper);

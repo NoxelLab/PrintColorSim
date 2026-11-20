@@ -1,9 +1,40 @@
 import { describe, expect, it } from 'vitest';
+import { resolve, type Settings } from '../src/lib/conditions';
 import { adaptation, cast, daylightXy, planckXy, type Vec3 } from '../src/lib/lighting';
 import { coast, moving, REST } from '../src/lib/rotation';
-import { coverage, finish, surfaceMap } from '../src/lib/surface';
+import { coverage, finish, included, surfaceMap } from '../src/lib/surface';
 
 const times = (m: number[], v: Vec3) => [0, 1, 2].map(r => m[r * 3] * v[0] + m[r * 3 + 1] * v[1] + m[r * 3 + 2] * v[2]);
+
+describe('conditions', () => {
+  const base = { method: 'offset', paper: 'coat', pp: 'none', region: 'eu', tint: '#eff1f4' } as Settings;
+  const approx = (s: Partial<Settings>, mode: 'preset' | 'custom' = 'preset') => resolve({ ...base, ...s }, mode).approx;
+
+  it('標準の測色データがある条件は目安にしない', () => {
+    expect(approx({})).toBe(false);
+    expect(approx({ paper: 'matte' })).toBe(false);
+    expect(approx({ paper: 'plain' })).toBe(false);
+    expect(approx({ region: 'us' })).toBe(false);
+    expect(approx({ pp: 'mattepp' })).toBe(false);
+    expect(approx({ paper: 'matte', pp: 'gloss' })).toBe(false);
+  });
+
+  it('標準の測色データがない条件は目安にする', () => {
+    expect(approx({ region: 'jp' })).toBe(true);
+    expect(approx({ method: 'ondemand' })).toBe(true);
+    expect(approx({ method: 'inkjet' })).toBe(true);
+    expect(approx({ paper: 'special' })).toBe(true);
+    expect(approx({ paper: 'plain', pp: 'gloss' })).toBe(true);
+    expect(approx({ region: 'us', pp: 'gloss' })).toBe(true);
+    expect(approx({ pp: 'gloss' }, 'custom')).toBe(true);
+    expect(approx({ method: 'inkjet' }, 'custom')).toBe(false);
+  });
+
+  it('PP 加工は加工後のプロファイルを選ぶ', () => {
+    expect(resolve({ ...base, pp: 'gloss' }, 'preset').film).toEqual({ finished: 'lamGloss', base: 'fogra39' });
+    expect(resolve(base, 'preset').film).toBeNull();
+  });
+});
 
 describe('lighting', () => {
   it('昼光軌跡の 6504K が D65 になる', () => {
@@ -49,6 +80,13 @@ describe('surface', () => {
     expect(map[1]).toBe(Math.round(f.paper * 255));
     expect(map[5]).toBe(Math.round(f.ink * 255));
     expect([map[0], map[4]]).toEqual([200, 0]);
+  });
+
+  it('測色値に含まれる表面反射は粗い面ほど多い', () => {
+    // マット PP の実測（FOGRA49）では、黒の反射率が加工前より約 1.5% 高い
+    expect(included(0.4)).toBeCloseTo(0.0127, 3);
+    expect(included(0.1)).toBeLessThan(0.0005);
+    expect(included(0.55)).toBeGreaterThan(included(0.4));
   });
 
   it('トナーは紙より光り、インクジェットは紙と同じ', () => {

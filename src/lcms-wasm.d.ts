@@ -16,8 +16,10 @@ declare module 'lcms-wasm' {
   export function instantiate(options?: { locateFile?: (path: string) => string }): Promise<Lcms>;
   export const TYPE_RGB_8: number;
   export const TYPE_CMYK_8: number;
+  export const TYPE_CMYK_16: number;
   export const PT_Lab: number;
   export const cmsFLAGS_BLACKPOINTCOMPENSATION: number;
+  export const cmsFLAGS_HIGHRESPRECALC: number;
   export function FLOAT_SH(v: number): number;
   export function COLORSPACE_SH(v: number): number;
   export function CHANNELS_SH(v: number): number;
